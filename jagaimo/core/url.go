@@ -115,6 +115,7 @@ func (url *Url) extractSearchPart() string {
 	return pathAndSearchPart[1]
 }
 
+//nolint:unparam
 func extractUrlParts(url, schema string) []string {
 	index := strings.LastIndex(url, schema)
 	return strings.SplitN(url[index+len(schema):], "/", 2)
