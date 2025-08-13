@@ -1,9 +1,9 @@
-name: Test
+name: test
 
 on: [push]
 
 jobs:
-  test:
+  test-jagaimo:
     runs-on: ubuntu-latest
 
     defaults:
