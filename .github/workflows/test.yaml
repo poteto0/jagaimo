@@ -3,12 +3,12 @@ name: test
 on: [push]
 
 jobs:
-  test-jagaimo:
+  test:
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: ./jagaimo
+        working-directory: ./
 
     steps:
       - name: Checkout repo
@@ -21,6 +21,3 @@ jobs:
         run: go mod download
       - name: test coverage
         run: go test ./... -cover -gcflags=all=-l
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          ADDRESS: ${{ secrets.ADDRESS }}
