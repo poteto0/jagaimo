@@ -10,7 +10,7 @@ func main() {
 	client := http.NewHttpClient()
 
 	res, err := client.GET(
-		"example.com", 80, "",
+		"localhost", 8000, "/test.html",
 	)
 
 	if err != nil {

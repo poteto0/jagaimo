@@ -56,7 +56,7 @@ func (c *HttpClient) GET(host string, port uint16, path string) (core.HttpRespon
 	request := "GET " + path + " HTTP/1.1\n"
 	request += "Host: " + host + "\n"
 	request += "Accept: text/html\n"
-	request += "Connection: close\n"
+	request += "Connection: close\n\n"
 
 	if _, err := conn.Write([]byte(request)); err != nil {
 		return core.HttpResponse{}, ErrFailedToSendRequest
@@ -64,8 +64,7 @@ func (c *HttpClient) GET(host string, port uint16, path string) (core.HttpRespon
 
 	// read response
 	received := make([]byte, MaxResponseSize)
-	_, err = conn.Read(received)
-	if err != nil {
+	if _, err = conn.Read(received); err != nil {
 		return core.HttpResponse{}, ErrFailedToReceiveResponse
 	}
 
