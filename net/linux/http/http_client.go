@@ -41,7 +41,7 @@ func (c *HttpClient) GET(host string, port uint16, path string) (core.HttpRespon
 		return core.HttpResponse{}, ErrFailedToFindIPAddresses
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", ips[0].String()+":"+strconv.Itoa(int(port)))
+	addr, err := net.ResolveTCPAddr("tcp", "["+ips[0].String()+"]"+":"+strconv.Itoa(int(port)))
 	if err != nil {
 		return core.HttpResponse{}, ErrFailedToCreateSocketAddress
 	}
@@ -70,5 +70,10 @@ func (c *HttpClient) GET(host string, port uint16, path string) (core.HttpRespon
 	}
 
 	// create response
-	return core.HttpResponse{}, nil
+	res, err := core.NewHttpResponse(string(received))
+	if err != nil {
+		return core.HttpResponse{}, err
+	}
+
+	return res, nil
 }
