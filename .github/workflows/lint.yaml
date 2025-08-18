@@ -24,4 +24,4 @@ jobs:
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.3.1
       - id: lint
         name: Run linter
-        run: golangci-lint run -c ../.golangci.yaml
+        run: golangci-lint run -c .golangci.yaml
