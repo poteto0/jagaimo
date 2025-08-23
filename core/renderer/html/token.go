@@ -13,16 +13,16 @@ type EndTag struct {
 type EOF int
 
 type HtmlToken struct {
-	StartTag StartTag
-	EndTag   EndTag
+	StartTag *StartTag
+	EndTag   *EndTag
 	EOF      EOF
 	Rune     rune
 }
 
 func newEOFToken() *HtmlToken {
 	return &HtmlToken{
-		StartTag: StartTag{},
-		EndTag:   EndTag{},
+		StartTag: nil,
+		EndTag:   nil,
 		EOF:      EOF(1), // ! not 0
 		Rune:     0,
 	}
@@ -30,19 +30,19 @@ func newEOFToken() *HtmlToken {
 
 func newRuneToken(r rune) *HtmlToken {
 	return &HtmlToken{
-		StartTag: StartTag{},
-		EndTag:   EndTag{},
+		StartTag: nil,
+		EndTag:   nil,
 		EOF:      EOF(0), // not EOF
 		Rune:     r,
 	}
 }
 
 func (token *HtmlToken) IsStartTag() bool {
-	return token.StartTag.Tag != ""
+	return token.StartTag != nil
 }
 
 func (token *HtmlToken) IsEndTag() bool {
-	return token.EndTag.Tag != ""
+	return token.EndTag != nil
 }
 
 func (token *HtmlToken) IsEOF() bool {

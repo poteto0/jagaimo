@@ -2,14 +2,18 @@ package html
 
 import (
 	"iter"
+	"unicode"
 )
 
 type IHtmlTokenizer interface {
 	Iter() iter.Seq[*HtmlToken]
 
 	consumeNextInput() rune
+	reConsumeInput() rune
 	isEOF() bool
 	createTag(isStartTagToken bool)
+	appendTagName(r rune)
+	takeLastToken() *HtmlToken
 }
 
 type HtmlTokenizer struct {
@@ -42,7 +46,12 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 		}
 
 		for {
-			r := tokenizer.consumeNextInput()
+			r := func() rune {
+				if tokenizer.ReConsume {
+					return tokenizer.reConsumeInput()
+				}
+				return tokenizer.consumeNextInput()
+			}()
 
 			switch tokenizer.State {
 			case Data:
@@ -80,6 +89,49 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				tokenizer.ReConsume = true
 				tokenizer.State = Data
 				continue
+
+			case EndTagOpen:
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				if isAsciiAlphabetic(r) {
+					tokenizer.ReConsume = true
+					tokenizer.State = TagName
+					tokenizer.createTag(false)
+					continue
+				}
+
+			case TagName:
+				if r == ' ' {
+					tokenizer.State = BeforeAttributeName
+					continue
+				}
+
+				// <img />
+				if r == '/' {
+					tokenizer.State = SelfClosingStartTag
+					continue
+				}
+
+				if r == '>' {
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if isAsciiAlphabetic(r) {
+					tokenizer.appendTagName(unicode.ToLower(r))
+					continue
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.appendTagName(r)
 			}
 		}
 	}
@@ -91,18 +143,20 @@ func (tokenizer *HtmlTokenizer) consumeNextInput() rune {
 	return r
 }
 
-func (tokenizer *HtmlTokenizer) isEOF() bool {
-	return tokenizer.Pos > uint(len(tokenizer.Input))
+func (tokenizer *HtmlTokenizer) reConsumeInput() rune {
+	tokenizer.ReConsume = false
+	tokenizer.Pos--
+	return tokenizer.consumeNextInput()
 }
 
-func isAsciiAlphabetic(r rune) bool {
-	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+func (tokenizer *HtmlTokenizer) isEOF() bool {
+	return tokenizer.Pos > uint(len(tokenizer.Input))
 }
 
 func (tokenizer *HtmlTokenizer) createTag(isStartTagToken bool) {
 	if isStartTagToken {
 		tokenizer.LatestToken = &HtmlToken{
-			StartTag: StartTag{
+			StartTag: &StartTag{
 				Tag:           "",
 				IsSelfClosing: false,
 				Attributes:    []Attribute{},
@@ -112,8 +166,42 @@ func (tokenizer *HtmlTokenizer) createTag(isStartTagToken bool) {
 	}
 
 	tokenizer.LatestToken = &HtmlToken{
-		EndTag: EndTag{
+		EndTag: &EndTag{
 			Tag: "",
 		},
 	}
+}
+
+func (tokenizer *HtmlTokenizer) appendTagName(r rune) {
+	if tokenizer.LatestToken == nil {
+		panic("unexpected nil latest token")
+	}
+
+	token := tokenizer.LatestToken
+	if token.IsStartTag() {
+		token.StartTag.Tag += string(r)
+		return
+	}
+
+	if token.IsEndTag() {
+		token.EndTag.Tag += string(r)
+		return
+	}
+
+	panic("unexpected latest token, only expect StartTag or EndTag")
+}
+
+func (tokenizer *HtmlTokenizer) takeLastToken() *HtmlToken {
+	if tokenizer.LatestToken == nil {
+		panic("unexpected nil latest token")
+	}
+
+	token := tokenizer.LatestToken
+	tokenizer.LatestToken = nil
+
+	return token
+}
+
+func isAsciiAlphabetic(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }

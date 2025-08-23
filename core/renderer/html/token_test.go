@@ -26,9 +26,7 @@ func TestNewRuneToken(t *testing.T) {
 func TestHtmlToken_IsStartTag(t *testing.T) {
 	// Arrange
 	token := HtmlToken{
-		StartTag: StartTag{
-			Tag: "div",
-		},
+		StartTag: &StartTag{},
 	}
 
 	// Act & Assert
@@ -36,7 +34,7 @@ func TestHtmlToken_IsStartTag(t *testing.T) {
 
 	// Arrange
 	token = HtmlToken{
-		StartTag: StartTag{},
+		StartTag: nil,
 	}
 
 	// Act & Assert
@@ -46,9 +44,7 @@ func TestHtmlToken_IsStartTag(t *testing.T) {
 func TestIsEnToken(t *testing.T) {
 	// Arrange
 	token := HtmlToken{
-		EndTag: EndTag{
-			Tag: "div",
-		},
+		EndTag: &EndTag{},
 	}
 
 	// Act & Assert
@@ -56,7 +52,7 @@ func TestIsEnToken(t *testing.T) {
 
 	// Arrange
 	token = HtmlToken{
-		EndTag: EndTag{},
+		EndTag: nil,
 	}
 
 	// Act & Assert
