@@ -15,6 +15,7 @@ type IHtmlTokenizer interface {
 	appendTagName(r rune)
 	takeLastToken() *HtmlToken
 	startNewAttribute()
+	appendAttribute(r rune, isName bool)
 }
 
 type HtmlTokenizer struct {
@@ -145,6 +146,30 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				tokenizer.State = AttributeName
 				tokenizer.startNewAttribute()
 				continue
+
+			case AttributeName:
+				if r == '/' || r == '>' || tokenizer.isEOF() {
+					tokenizer.ReConsume = true
+					tokenizer.State = AfterAttributeName
+					continue
+				}
+
+				if r == '=' {
+					tokenizer.State = BeforeAttributeValue
+					continue
+				}
+
+				if isAsciiAlphabetic(r) {
+					tokenizer.appendAttribute(
+						unicode.ToLower(r),
+						/*isName = */ true,
+					)
+				}
+
+				tokenizer.appendAttribute(
+					r,
+					/*isName = */ false,
+				)
 			}
 		}
 	}
@@ -223,6 +248,25 @@ func (tokenizer *HtmlTokenizer) startNewAttribute() {
 	token := tokenizer.LatestToken
 	if token.IsStartTag() {
 		token.StartTag.Attributes = append(token.StartTag.Attributes, Attribute{})
+		return
+	}
+
+	panic("unexpected latest token, only expect StartTag")
+}
+
+func (tokenizer *HtmlTokenizer) appendAttribute(r rune, isName bool) {
+	if tokenizer.LatestToken == nil {
+		panic("unexpected nil latest token")
+	}
+
+	token := tokenizer.LatestToken
+	if token.IsStartTag() {
+		attrLens := len(token.StartTag.Attributes)
+		if attrLens <= 0 {
+			panic("unexpected empty attribute list")
+		}
+
+		token.StartTag.Attributes[len(token.StartTag.Attributes)-1].AddRune(r, isName)
 		return
 	}
 

@@ -356,6 +356,100 @@ func TestHtmlTokenizer_startNewAttribute(t *testing.T) {
 	})
 }
 
+func TestHtmlTokenizer_appendAttribute(t *testing.T) {
+	t.Run("normal case, append rune to target attribute", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			r           rune
+			isName      bool
+			latestToken *HtmlToken
+			expected    []Attribute
+		}{
+			{
+				name:   "append to start tag",
+				r:      'a',
+				isName: true,
+				latestToken: &HtmlToken{
+					StartTag: &StartTag{
+						Attributes: []Attribute{
+							{},
+						},
+					},
+				},
+				expected: []Attribute{
+					{
+						name:  "a",
+						value: "",
+					},
+				},
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.appendAttribute(it.r, it.isName)
+
+				// Assert
+				assert.Equal(t, it.expected, tokenizer.LatestToken.StartTag.Attributes)
+			})
+		}
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			latestToken *HtmlToken
+		}{
+			{
+				name:        "nil latest token",
+				latestToken: nil,
+			},
+			{
+				name: "StartTag w/ 0 length attribute list",
+				latestToken: &HtmlToken{
+					StartTag: &StartTag{
+						Attributes: []Attribute{},
+					},
+				},
+			},
+			{
+				name:        "unexpected eof token",
+				latestToken: newEOFToken(),
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				var err error
+				defer func() {
+					if r := recover(); r != nil {
+						err = errors.New("panic")
+					}
+				}()
+
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.appendAttribute('a', true)
+
+				// Assert
+				assert.Error(t, err)
+			})
+		}
+	})
+}
+
 func Test_isAsciiAlphabetic(t *testing.T) {
 	// Act
 	result := isAsciiAlphabetic('a')
