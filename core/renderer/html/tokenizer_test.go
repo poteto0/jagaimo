@@ -281,6 +281,81 @@ func TestHtmlTokenizer_takeLastToken(t *testing.T) {
 	})
 }
 
+func TestHtmlTokenizer_startNewAttribute(t *testing.T) {
+	t.Run("normal case, append attribute", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			latestToken *HtmlToken
+			expected    []Attribute
+		}{
+			{
+				name: "append to start tag",
+				latestToken: &HtmlToken{
+					StartTag: &StartTag{},
+				},
+				expected: []Attribute{
+					{},
+				},
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.startNewAttribute()
+
+				// Assert
+				assert.Equal(t, it.expected, tokenizer.LatestToken.StartTag.Attributes)
+			})
+		}
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			latestToken *HtmlToken
+		}{
+			{
+				name:        "nil latest token",
+				latestToken: nil,
+			},
+			{
+				name:        "unexpected eof token",
+				latestToken: newEOFToken(),
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				var err error
+				defer func() {
+					if r := recover(); r != nil {
+						err = errors.New("panic")
+					}
+				}()
+
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.startNewAttribute()
+
+				// Assert
+				assert.Error(t, err)
+			})
+		}
+	})
+}
+
 func Test_isAsciiAlphabetic(t *testing.T) {
 	// Act
 	result := isAsciiAlphabetic('a')
