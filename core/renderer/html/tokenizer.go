@@ -168,11 +168,10 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 
 				tokenizer.appendAttribute(
 					r,
-					/*isName = */ false,
+					/*isName = */ true,
 				)
 
 			case AfterAttributeName:
-				// skip spaces
 				if r == ' ' {
 					continue
 				}
@@ -204,7 +203,6 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				continue
 
 			case BeforeAttributeValue:
-				// skip spaces
 				if r == ' ' {
 					continue
 				}
@@ -222,6 +220,19 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				tokenizer.ReConsume = true
 				tokenizer.State = AttributeValueUnquoted
 				continue
+
+			case AttributeValueDoubleQuoted:
+				if r == '"' {
+					tokenizer.State = AfterAttributeValueQuoted
+					continue
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.appendAttribute(r /*isName = */, false)
 			}
 		}
 	}
