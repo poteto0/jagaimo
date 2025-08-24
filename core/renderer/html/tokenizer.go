@@ -314,6 +314,86 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 					yield(newEOFToken())
 					return
 				}
+
+			case ScriptData:
+				if r == '<' {
+					tokenizer.State = ScriptDataLessThanSign
+					continue
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				yield(newRuneToken(r))
+				return
+
+			case ScriptDataLessThanSign:
+				if r == '/' {
+					// reset buffer
+					tokenizer.Buf = ""
+					tokenizer.State = ScriptDataEndTagOpen
+					continue
+				}
+
+				tokenizer.ReConsume = true
+				tokenizer.State = ScriptData
+				yield(newRuneToken('<'))
+				return
+
+			case ScriptDataEndTagOpen:
+				if isAsciiAlphabetic(r) {
+					tokenizer.ReConsume = true
+					tokenizer.State = ScriptDataEndTagName
+					tokenizer.createTag(false)
+					continue
+				}
+
+				tokenizer.ReConsume = true
+				tokenizer.State = ScriptData
+				// return "</", in the specifications
+				yield(newRuneToken('<'))
+				return
+
+			case ScriptDataEndTagName:
+				if r == '>' {
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if isAsciiAlphabetic(r) {
+					tokenizer.Buf += string(r)
+					tokenizer.appendTagName(unicode.ToLower(r))
+					continue
+				}
+
+				tokenizer.State = TemporaryBuffer
+				tokenizer.Buf = "</" + tokenizer.Buf
+				tokenizer.Buf += string(r)
+				continue
+
+			// temporary for develop
+			case TemporaryBuffer:
+				tokenizer.ReConsume = true
+
+				if len(tokenizer.Buf) == 0 {
+					tokenizer.State = ScriptData
+					continue
+				}
+
+				// delete first letter
+				rr := []rune(tokenizer.Buf)
+				if len(rr) <= 0 {
+					panic("unexpected empty buffer")
+				}
+				tokenizer.Buf = string(rr[1:])
+				yield(newRuneToken(r))
+				return
+
+			default:
+				panic("unexpected state")
 			}
 		}
 	}

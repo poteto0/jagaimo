@@ -20,6 +20,6 @@ const (
 	ScriptData
 	ScriptDataLessThanSign
 	ScriptDataEndTagOpen
-	ScriptDataTagName
+	ScriptDataEndTagName
 	TemporaryBuffer
 )
