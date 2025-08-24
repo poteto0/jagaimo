@@ -232,7 +232,74 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 					return
 				}
 
-				tokenizer.appendAttribute(r /*isName = */, false)
+				tokenizer.appendAttribute(
+					r,
+					/*isName = */ false,
+				)
+
+			case AttributeValueSingleQuoted:
+				if r == '\'' {
+					tokenizer.State = AfterAttributeValueQuoted
+					continue
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.appendAttribute(
+					r,
+					/*isName = */ false,
+				)
+
+			case AttributeValueUnquoted:
+				if r == ' ' {
+					tokenizer.State = BeforeAttributeName
+					continue
+				}
+
+				if r == '>' {
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.appendAttribute(
+					r,
+					/*isName = */ false,
+				)
+
+			case AfterAttributeValueQuoted:
+				if r == ' ' {
+					tokenizer.State = BeforeAttributeName
+					continue
+				}
+
+				if r == '/' {
+					tokenizer.State = SelfClosingStartTag
+					continue
+				}
+
+				if r == '>' {
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.ReConsume = true
+				tokenizer.State = BeforeAttributeName
+				continue
 			}
 		}
 	}
