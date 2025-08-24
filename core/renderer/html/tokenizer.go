@@ -202,6 +202,26 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				tokenizer.State = Data
 				tokenizer.startNewAttribute()
 				continue
+
+			case BeforeAttributeValue:
+				// skip spaces
+				if r == ' ' {
+					continue
+				}
+
+				if r == '"' {
+					tokenizer.State = AttributeValueDoubleQuoted
+					continue
+				}
+
+				if r == '\'' {
+					tokenizer.State = AttributeValueSingleQuoted
+					continue
+				}
+
+				tokenizer.ReConsume = true
+				tokenizer.State = AttributeValueUnquoted
+				continue
 			}
 		}
 	}
