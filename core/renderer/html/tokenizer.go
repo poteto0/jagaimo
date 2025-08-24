@@ -16,6 +16,7 @@ type IHtmlTokenizer interface {
 	takeLastToken() *HtmlToken
 	startNewAttribute()
 	appendAttribute(r rune, isName bool)
+	setSelfClosingFlag()
 }
 
 type HtmlTokenizer struct {
@@ -300,6 +301,19 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 				tokenizer.ReConsume = true
 				tokenizer.State = BeforeAttributeName
 				continue
+
+			case SelfClosingStartTag:
+				if r == '>' {
+					tokenizer.setSelfClosingFlag()
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
 			}
 		}
 	}
@@ -397,6 +411,20 @@ func (tokenizer *HtmlTokenizer) appendAttribute(r rune, isName bool) {
 		}
 
 		token.StartTag.Attributes[len(token.StartTag.Attributes)-1].AddRune(r, isName)
+		return
+	}
+
+	panic("unexpected latest token, only expect StartTag")
+}
+
+func (tokenizer *HtmlTokenizer) setSelfClosingFlag() {
+	if tokenizer.LatestToken == nil {
+		panic("unexpected nil latest token")
+	}
+
+	token := tokenizer.LatestToken
+	if token.IsStartTag() {
+		token.StartTag.IsSelfClosing = true
 		return
 	}
 

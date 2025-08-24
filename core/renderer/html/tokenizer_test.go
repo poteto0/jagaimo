@@ -450,6 +450,81 @@ func TestHtmlTokenizer_appendAttribute(t *testing.T) {
 	})
 }
 
+func TestHtmlTokenizer_setSelfClosingFlag(t *testing.T) {
+	t.Run("normal case, set IsSelfClosing flag to true", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			latestToken *HtmlToken
+			expected    bool
+		}{
+			{
+				name: "set IsSelfClosing flag to true",
+				latestToken: &HtmlToken{
+					StartTag: &StartTag{
+						IsSelfClosing: false,
+					},
+				},
+				expected: true,
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.setSelfClosingFlag()
+
+				// Assert
+				assert.Equal(t, it.expected, tokenizer.LatestToken.StartTag.IsSelfClosing)
+			})
+		}
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			latestToken *HtmlToken
+		}{
+			{
+				name:        "nil latest token",
+				latestToken: nil,
+			},
+			{
+				name:        "unexpected eof token",
+				latestToken: newEOFToken(),
+			},
+		}
+
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				var err error
+				defer func() {
+					if r := recover(); r != nil {
+						err = errors.New("panic")
+					}
+				}()
+
+				// Arrange
+				tokenizer.LatestToken = it.latestToken
+
+				// Act
+				tokenizer.setSelfClosingFlag()
+
+				// Assert
+				assert.Error(t, err)
+			})
+		}
+	})
+}
+
 func Test_isAsciiAlphabetic(t *testing.T) {
 	// Act
 	result := isAsciiAlphabetic('a')
