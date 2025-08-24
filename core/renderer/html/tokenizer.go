@@ -170,6 +170,38 @@ func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
 					r,
 					/*isName = */ false,
 				)
+
+			case AfterAttributeName:
+				// skip spaces
+				if r == ' ' {
+					continue
+				}
+
+				if r == '/' {
+					tokenizer.State = SelfClosingStartTag
+					continue
+				}
+
+				if r == '>' {
+					tokenizer.State = Data
+					yield(tokenizer.takeLastToken())
+					return
+				}
+
+				if r == '=' {
+					tokenizer.State = BeforeAttributeValue
+					continue
+				}
+
+				if tokenizer.isEOF() {
+					yield(newEOFToken())
+					return
+				}
+
+				tokenizer.ReConsume = true
+				tokenizer.State = Data
+				tokenizer.startNewAttribute()
+				continue
 			}
 		}
 	}
