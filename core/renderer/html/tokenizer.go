@@ -1,12 +1,11 @@
 package html
 
 import (
-	"iter"
 	"unicode"
 )
 
 type IHtmlTokenizer interface {
-	Iter() iter.Seq[*HtmlToken]
+	Next() *HtmlToken
 
 	consumeNextInput() rune
 	reConsumeInput() rune
@@ -39,362 +38,335 @@ func NewHtmlTokenizer(html string) IHtmlTokenizer {
 	}
 }
 
-func (tokenizer *HtmlTokenizer) Iter() iter.Seq[*HtmlToken] {
-	return func(yield func(*HtmlToken) bool) {
-		// ! not EOF
-		// ! starts w/ last token
-		if tokenizer.Pos >= uint(len(tokenizer.Input)) {
-			yield(nil)
-			return
-		}
+func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
+	// ! not EOF
+	// ! starts w/ last token
+	if tokenizer.Pos >= uint(len(tokenizer.Input)) {
+		return nil
+	}
 
-		for {
-			r := func() rune {
-				if tokenizer.ReConsume {
-					return tokenizer.reConsumeInput()
-				}
-				return tokenizer.consumeNextInput()
-			}()
+	for {
+		r := func() rune {
+			if tokenizer.ReConsume {
+				return tokenizer.reConsumeInput()
+			}
+			return tokenizer.consumeNextInput()
+		}()
 
-			switch tokenizer.State {
-			case Data:
-				if r == '<' {
-					tokenizer.State = TagOpen
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				yield(newRuneToken(r))
-				return
-
-			case TagOpen:
-				if r == '/' {
-					tokenizer.State = EndTagOpen
-					continue
-				}
-
-				if isAsciiAlphabetic(r) {
-					tokenizer.ReConsume = true
-					tokenizer.State = TagName
-					tokenizer.createTag(true)
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.ReConsume = true
-				tokenizer.State = Data
+		switch tokenizer.State {
+		case Data:
+			if r == '<' {
+				tokenizer.State = TagOpen
 				continue
+			}
 
-			case EndTagOpen:
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
 
-				if isAsciiAlphabetic(r) {
-					tokenizer.ReConsume = true
-					tokenizer.State = TagName
-					tokenizer.createTag(false)
-					continue
-				}
+			return newRuneToken(r)
 
-			case TagName:
-				if r == ' ' {
-					tokenizer.State = BeforeAttributeName
-					continue
-				}
-
-				// <img />
-				if r == '/' {
-					tokenizer.State = SelfClosingStartTag
-					continue
-				}
-
-				if r == '>' {
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if isAsciiAlphabetic(r) {
-					tokenizer.appendTagName(unicode.ToLower(r))
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.appendTagName(r)
-
-			case BeforeAttributeName:
-				if r == '/' || r == '>' || tokenizer.isEOF() {
-					tokenizer.ReConsume = true
-					tokenizer.State = AfterAttributeName
-					continue
-				}
-
-				tokenizer.ReConsume = true
-				tokenizer.State = AttributeName
-				tokenizer.startNewAttribute()
+		case TagOpen:
+			if r == '/' {
+				tokenizer.State = EndTagOpen
 				continue
+			}
 
-			case AttributeName:
-				if r == '/' || r == '>' || tokenizer.isEOF() {
-					tokenizer.ReConsume = true
-					tokenizer.State = AfterAttributeName
-					continue
-				}
-
-				if r == '=' {
-					tokenizer.State = BeforeAttributeValue
-					continue
-				}
-
-				if isAsciiAlphabetic(r) {
-					tokenizer.appendAttribute(
-						unicode.ToLower(r),
-						/*isName = */ true,
-					)
-				}
-
-				tokenizer.appendAttribute(
-					r,
-					/*isName = */ true,
-				)
-
-			case AfterAttributeName:
-				if r == ' ' {
-					continue
-				}
-
-				if r == '/' {
-					tokenizer.State = SelfClosingStartTag
-					continue
-				}
-
-				if r == '>' {
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if r == '=' {
-					tokenizer.State = BeforeAttributeValue
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
+			if isAsciiAlphabetic(r) {
 				tokenizer.ReConsume = true
-				tokenizer.State = Data
-				tokenizer.startNewAttribute()
+				tokenizer.State = TagName
+				tokenizer.createTag(true)
 				continue
+			}
 
-			case BeforeAttributeValue:
-				if r == ' ' {
-					continue
-				}
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
 
-				if r == '"' {
-					tokenizer.State = AttributeValueDoubleQuoted
-					continue
-				}
+			tokenizer.ReConsume = true
+			tokenizer.State = Data
+			continue
 
-				if r == '\'' {
-					tokenizer.State = AttributeValueSingleQuoted
-					continue
-				}
+		case EndTagOpen:
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
 
+			if isAsciiAlphabetic(r) {
 				tokenizer.ReConsume = true
-				tokenizer.State = AttributeValueUnquoted
+				tokenizer.State = TagName
+				tokenizer.createTag(false)
 				continue
+			}
 
-			case AttributeValueDoubleQuoted:
-				if r == '"' {
-					tokenizer.State = AfterAttributeValueQuoted
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.appendAttribute(
-					r,
-					/*isName = */ false,
-				)
-
-			case AttributeValueSingleQuoted:
-				if r == '\'' {
-					tokenizer.State = AfterAttributeValueQuoted
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.appendAttribute(
-					r,
-					/*isName = */ false,
-				)
-
-			case AttributeValueUnquoted:
-				if r == ' ' {
-					tokenizer.State = BeforeAttributeName
-					continue
-				}
-
-				if r == '>' {
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.appendAttribute(
-					r,
-					/*isName = */ false,
-				)
-
-			case AfterAttributeValueQuoted:
-				if r == ' ' {
-					tokenizer.State = BeforeAttributeName
-					continue
-				}
-
-				if r == '/' {
-					tokenizer.State = SelfClosingStartTag
-					continue
-				}
-
-				if r == '>' {
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				tokenizer.ReConsume = true
+		case TagName:
+			if r == ' ' {
 				tokenizer.State = BeforeAttributeName
 				continue
-
-			case SelfClosingStartTag:
-				if r == '>' {
-					tokenizer.setSelfClosingFlag()
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-			case ScriptData:
-				if r == '<' {
-					tokenizer.State = ScriptDataLessThanSign
-					continue
-				}
-
-				if tokenizer.isEOF() {
-					yield(newEOFToken())
-					return
-				}
-
-				yield(newRuneToken(r))
-				return
-
-			case ScriptDataLessThanSign:
-				if r == '/' {
-					// reset buffer
-					tokenizer.Buf = ""
-					tokenizer.State = ScriptDataEndTagOpen
-					continue
-				}
-
-				tokenizer.ReConsume = true
-				tokenizer.State = ScriptData
-				yield(newRuneToken('<'))
-				return
-
-			case ScriptDataEndTagOpen:
-				if isAsciiAlphabetic(r) {
-					tokenizer.ReConsume = true
-					tokenizer.State = ScriptDataEndTagName
-					tokenizer.createTag(false)
-					continue
-				}
-
-				tokenizer.ReConsume = true
-				tokenizer.State = ScriptData
-				// return "</", in the specifications
-				yield(newRuneToken('<'))
-				return
-
-			case ScriptDataEndTagName:
-				if r == '>' {
-					tokenizer.State = Data
-					yield(tokenizer.takeLastToken())
-					return
-				}
-
-				if isAsciiAlphabetic(r) {
-					tokenizer.Buf += string(r)
-					tokenizer.appendTagName(unicode.ToLower(r))
-					continue
-				}
-
-				tokenizer.State = TemporaryBuffer
-				tokenizer.Buf = "</" + tokenizer.Buf
-				tokenizer.Buf += string(r)
-				continue
-
-			// temporary for develop
-			case TemporaryBuffer:
-				tokenizer.ReConsume = true
-
-				if len(tokenizer.Buf) == 0 {
-					tokenizer.State = ScriptData
-					continue
-				}
-
-				// delete first letter
-				rr := []rune(tokenizer.Buf)
-				if len(rr) <= 0 {
-					panic("unexpected empty buffer")
-				}
-				tokenizer.Buf = string(rr[1:])
-				yield(newRuneToken(r))
-				return
-
-			default:
-				panic("unexpected state")
 			}
+
+			// <img />
+			if r == '/' {
+				tokenizer.State = SelfClosingStartTag
+				continue
+			}
+
+			if r == '>' {
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			if isAsciiAlphabetic(r) {
+				tokenizer.appendTagName(unicode.ToLower(r))
+				continue
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			tokenizer.appendTagName(r)
+
+		case BeforeAttributeName:
+			if r == '/' || r == '>' || tokenizer.isEOF() {
+				tokenizer.ReConsume = true
+				tokenizer.State = AfterAttributeName
+				continue
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = AttributeName
+			tokenizer.startNewAttribute()
+			continue
+
+		case AttributeName:
+			if r == '/' || r == '>' || tokenizer.isEOF() {
+				tokenizer.ReConsume = true
+				tokenizer.State = AfterAttributeName
+				continue
+			}
+
+			if r == '=' {
+				tokenizer.State = BeforeAttributeValue
+				continue
+			}
+
+			if isAsciiAlphabetic(r) {
+				tokenizer.appendAttribute(
+					unicode.ToLower(r),
+					/*isName = */ true,
+				)
+				continue
+			}
+
+			tokenizer.appendAttribute(
+				r,
+				/*isName = */ true,
+			)
+			continue
+
+		case AfterAttributeName:
+			if r == ' ' {
+				continue
+			}
+
+			if r == '/' {
+				tokenizer.State = SelfClosingStartTag
+				continue
+			}
+
+			if r == '>' {
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			if r == '=' {
+				tokenizer.State = BeforeAttributeValue
+				continue
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = Data
+			tokenizer.startNewAttribute()
+			continue
+
+		case BeforeAttributeValue:
+			if r == ' ' {
+				continue
+			}
+
+			if r == '"' {
+				tokenizer.State = AttributeValueDoubleQuoted
+				continue
+			}
+
+			if r == '\'' {
+				tokenizer.State = AttributeValueSingleQuoted
+				continue
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = AttributeValueUnquoted
+			continue
+
+		case AttributeValueDoubleQuoted:
+			if r == '"' {
+				tokenizer.State = AfterAttributeValueQuoted
+				continue
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			tokenizer.appendAttribute(
+				r,
+				/*isName = */ false,
+			)
+
+		case AttributeValueSingleQuoted:
+			if r == '\'' {
+				tokenizer.State = AfterAttributeValueQuoted
+				continue
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			tokenizer.appendAttribute(
+				r,
+				/*isName = */ false,
+			)
+
+		case AttributeValueUnquoted:
+			if r == ' ' {
+				tokenizer.State = BeforeAttributeName
+				continue
+			}
+
+			if r == '>' {
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			tokenizer.appendAttribute(
+				r,
+				/*isName = */ false,
+			)
+
+		case AfterAttributeValueQuoted:
+			if r == ' ' {
+				tokenizer.State = BeforeAttributeName
+				continue
+			}
+
+			if r == '/' {
+				tokenizer.State = SelfClosingStartTag
+				continue
+			}
+
+			if r == '>' {
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = BeforeAttributeName
+			continue
+
+		case SelfClosingStartTag:
+			if r == '>' {
+				tokenizer.setSelfClosingFlag()
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+		case ScriptData:
+			if r == '<' {
+				tokenizer.State = ScriptDataLessThanSign
+				continue
+			}
+
+			if tokenizer.isEOF() {
+				return newEOFToken()
+			}
+
+			return newRuneToken(r)
+
+		case ScriptDataLessThanSign:
+			if r == '/' {
+				// reset buffer
+				tokenizer.Buf = ""
+				tokenizer.State = ScriptDataEndTagOpen
+				continue
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = ScriptData
+			return newRuneToken('<')
+
+		case ScriptDataEndTagOpen:
+			if isAsciiAlphabetic(r) {
+				tokenizer.ReConsume = true
+				tokenizer.State = ScriptDataEndTagName
+				tokenizer.createTag(false)
+				continue
+			}
+
+			tokenizer.ReConsume = true
+			tokenizer.State = ScriptData
+			// return "</", in the specifications
+			return newRuneToken('<')
+
+		case ScriptDataEndTagName:
+			if r == '>' {
+				tokenizer.State = Data
+				return tokenizer.takeLastToken()
+			}
+
+			if isAsciiAlphabetic(r) {
+				tokenizer.Buf += string(r)
+				tokenizer.appendTagName(unicode.ToLower(r))
+				continue
+			}
+
+			tokenizer.State = TemporaryBuffer
+			tokenizer.Buf = "</" + tokenizer.Buf
+			tokenizer.Buf += string(r)
+			continue
+
+		// temporary for develop
+		case TemporaryBuffer:
+			tokenizer.ReConsume = true
+
+			if len(tokenizer.Buf) == 0 {
+				tokenizer.State = ScriptData
+				continue
+			}
+
+			// delete first letter
+			rr := []rune(tokenizer.Buf)
+			if len(rr) <= 0 {
+				panic("unexpected empty buffer")
+			}
+			tokenizer.Buf = string(rr[1:])
+			return newRuneToken(r)
+
+		default:
+			panic("unexpected state")
 		}
 	}
 }

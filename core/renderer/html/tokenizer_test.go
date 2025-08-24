@@ -25,14 +25,182 @@ func TestNewHtmlTokenizer(t *testing.T) {
 }
 
 func TestHtmlTokenizer_Iter(t *testing.T) {
-	// Arrange
-	tokenizer := NewHtmlTokenizer("html")
-	expected := newRuneToken('h')
+	t.Run("empty string return nil", func(t *testing.T) {
+		// Arrange
+		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
 
-	// Act
-	for token := range tokenizer.Iter() {
-		assert.Equal(t, expected, token)
-	}
+		// Act & Assert
+		assert.Nil(t, tokenizer.Next())
+	})
+
+	t.Run("iter case", func(t *testing.T) {
+
+		tests := []struct {
+			name     string
+			input    string
+			expected []*HtmlToken
+		}{
+			{
+				name:  "start & end tag",
+				input: "<body></body>",
+				expected: []*HtmlToken{
+					{
+						StartTag: &StartTag{
+							Tag:           "body",
+							IsSelfClosing: false,
+							Attributes:    []Attribute{},
+						},
+					},
+					{
+						EndTag: &EndTag{
+							Tag: "body",
+						},
+					},
+				},
+			},
+			{
+				name:  "attributes",
+				input: "<p class=\"A\" id='B' foo=bar fizz=buzz></p>",
+				expected: []*HtmlToken{
+					{
+						StartTag: &StartTag{
+							Tag: "p",
+							Attributes: []Attribute{
+								{
+									name:  "class",
+									value: "A",
+								},
+								{
+									name:  "id",
+									value: "B",
+								},
+								{
+									name:  "foo",
+									value: "bar",
+								},
+								{
+									name:  "fizz",
+									value: "buzz",
+								},
+							},
+							IsSelfClosing: false,
+						},
+					},
+					{
+						EndTag: &EndTag{
+							Tag: "p",
+						},
+					},
+				},
+			},
+			{
+				name:  "quoted attribute",
+				input: "<div id=\"div\"><p class=\" A\" id=\"BC\"/></div>",
+				expected: []*HtmlToken{
+					{
+						StartTag: &StartTag{
+							Tag: "div",
+							Attributes: []Attribute{
+								{
+									name:  "id",
+									value: "div",
+								},
+							},
+							IsSelfClosing: false,
+						},
+					},
+					{
+						StartTag: &StartTag{
+							Tag: "p",
+							Attributes: []Attribute{
+								{
+									name:  "class",
+									value: " A",
+								},
+								{
+									name:  "id",
+									value: "BC",
+								},
+							},
+							IsSelfClosing: true,
+						},
+					},
+					{
+						EndTag: &EndTag{
+							Tag: "div",
+						},
+					},
+				},
+			},
+			{
+				name:  "self closing & empty tag case",
+				input: "<img />",
+				expected: []*HtmlToken{
+					{
+						StartTag: &StartTag{
+							Tag:           "img",
+							IsSelfClosing: true,
+							Attributes:    []Attribute{},
+						},
+					},
+				},
+			},
+			{
+				name:  "script tag",
+				input: "<script> console.log(\"hello\")</script>",
+				expected: []*HtmlToken{
+					{
+						StartTag: &StartTag{
+							Tag:           "script",
+							IsSelfClosing: false,
+							Attributes:    []Attribute{},
+						},
+					},
+					newRuneToken(' '),
+					newRuneToken('c'),
+					newRuneToken('o'),
+					newRuneToken('n'),
+					newRuneToken('s'),
+					newRuneToken('o'),
+					newRuneToken('l'),
+					newRuneToken('e'),
+					newRuneToken('.'),
+					newRuneToken('l'),
+					newRuneToken('o'),
+					newRuneToken('g'),
+					newRuneToken('('),
+					newRuneToken('"'),
+					newRuneToken('h'),
+					newRuneToken('e'),
+					newRuneToken('l'),
+					newRuneToken('l'),
+					newRuneToken('o'),
+					newRuneToken('"'),
+					newRuneToken(')'),
+					{
+						EndTag: &EndTag{
+							Tag: "script",
+						},
+					},
+				},
+			},
+		}
+
+		for _, it := range tests {
+			t.Run(it.name, func(t *testing.T) {
+				// Arrange
+				tokenizer := NewHtmlTokenizer(it.input).(*HtmlTokenizer)
+
+				for _, e := range it.expected {
+					// Act
+					token := tokenizer.Next()
+
+					// Assert
+					assert.Equal(t, e, token)
+				}
+			})
+		}
+	})
 }
 
 func TestHtmlTokenizer_consumeNextInput(t *testing.T) {
