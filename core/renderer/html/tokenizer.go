@@ -5,17 +5,13 @@ import (
 )
 
 type IHtmlTokenizer interface {
+	/*
+		parse html to make token
+			- increment letter one by one
+			- change state
+			- create token & return it
+	*/
 	Next() *HtmlToken
-
-	consumeNextInput() rune
-	reConsumeInput() rune
-	isEOF() bool
-	createTag(isStartTagToken bool)
-	appendTagName(r rune)
-	takeLastToken() *HtmlToken
-	startNewAttribute()
-	appendAttribute(r rune, isName bool)
-	setSelfClosingFlag()
 }
 
 type HtmlTokenizer struct {
@@ -53,322 +49,475 @@ func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
 			return tokenizer.consumeNextInput()
 		}()
 
+		// TODO: state stays case doc
 		switch tokenizer.State {
+		// Data ---> TagOpen
 		case Data:
-			if r == '<' {
-				tokenizer.State = TagOpen
-				continue
+			if token := tokenizer.parseData(r); token != nil {
+				return token
 			}
 
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			return newRuneToken(r)
-
+		// TagOpen ---> EndTagOpen | TagName
 		case TagOpen:
-			if r == '/' {
-				tokenizer.State = EndTagOpen
-				continue
-			}
+			// this just return nil
+			tokenizer.parseTagOpen(r)
 
-			if isAsciiAlphabetic(r) {
-				tokenizer.ReConsume = true
-				tokenizer.State = TagName
-				tokenizer.createTag(true)
-				continue
-			}
-
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.ReConsume = true
-			tokenizer.State = Data
-			continue
-
+		// EndTagOpen ---> TagName
 		case EndTagOpen:
-			if tokenizer.isEOF() {
-				return newEOFToken()
+			if token := tokenizer.parseEndTagOpen(r); token != nil {
+				return token
 			}
 
-			if isAsciiAlphabetic(r) {
-				tokenizer.ReConsume = true
-				tokenizer.State = TagName
-				tokenizer.createTag(false)
-				continue
-			}
-
+		// TagName ---> BeforeAttributeName | SelfClosingStartTag | Data
 		case TagName:
-			if r == ' ' {
-				tokenizer.State = BeforeAttributeName
-				continue
+			if token := tokenizer.parseTagName(r); token != nil {
+				return token
 			}
 
-			// <img />
-			if r == '/' {
-				tokenizer.State = SelfClosingStartTag
-				continue
-			}
-
-			if r == '>' {
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
-			}
-
-			if isAsciiAlphabetic(r) {
-				tokenizer.appendTagName(unicode.ToLower(r))
-				continue
-			}
-
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.appendTagName(r)
-
+		// BeforeAttributeName ---> AfterAttributeName | AttributeName
 		case BeforeAttributeName:
-			if r == '/' || r == '>' || tokenizer.isEOF() {
-				tokenizer.ReConsume = true
-				tokenizer.State = AfterAttributeName
-				continue
+			if token := tokenizer.parseBeforeAttributeName(r); token != nil {
+				return token
 			}
 
-			tokenizer.ReConsume = true
-			tokenizer.State = AttributeName
-			tokenizer.startNewAttribute()
-			continue
-
+		// AttributeName ---> AfterAttributeName | BeforeAttributeValue
 		case AttributeName:
-			if r == '/' || r == '>' || tokenizer.isEOF() {
-				tokenizer.ReConsume = true
-				tokenizer.State = AfterAttributeName
-				continue
-			}
+			// just return nil
+			tokenizer.parseAttributeName(r)
 
-			if r == '=' {
-				tokenizer.State = BeforeAttributeValue
-				continue
-			}
-
-			if isAsciiAlphabetic(r) {
-				tokenizer.appendAttribute(
-					unicode.ToLower(r),
-					/*isName = */ true,
-				)
-				continue
-			}
-
-			tokenizer.appendAttribute(
-				r,
-				/*isName = */ true,
-			)
-			continue
-
+		// AfterAttributeName ---> SelfClosingStartTag | Data | BeforeAttributeValue
 		case AfterAttributeName:
-			if r == ' ' {
-				continue
+			if token := tokenizer.parseAfterAttributeName(r); token != nil {
+				return token
 			}
 
-			if r == '/' {
-				tokenizer.State = SelfClosingStartTag
-				continue
-			}
-
-			if r == '>' {
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
-			}
-
-			if r == '=' {
-				tokenizer.State = BeforeAttributeValue
-				continue
-			}
-
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.ReConsume = true
-			tokenizer.State = Data
-			tokenizer.startNewAttribute()
-			continue
-
+		//  BeforeAttributeValue ---> AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
 		case BeforeAttributeValue:
-			if r == ' ' {
-				continue
-			}
+			// just return nil
+			tokenizer.parseBeforeAttributeValue(r)
 
-			if r == '"' {
-				tokenizer.State = AttributeValueDoubleQuoted
-				continue
-			}
-
-			if r == '\'' {
-				tokenizer.State = AttributeValueSingleQuoted
-				continue
-			}
-
-			tokenizer.ReConsume = true
-			tokenizer.State = AttributeValueUnquoted
-			continue
-
+		// AttributeValueDoubleQuoted ---> AfterAttributeValueQuoted
 		case AttributeValueDoubleQuoted:
-			if r == '"' {
-				tokenizer.State = AfterAttributeValueQuoted
-				continue
+			if token := tokenizer.parseAttributeValueDoubleQuoted(r); token != nil {
+				return token
 			}
 
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.appendAttribute(
-				r,
-				/*isName = */ false,
-			)
-
+		// AttributeValueSingleQuoted ---> AfterAttributeValueQuoted
 		case AttributeValueSingleQuoted:
-			if r == '\'' {
-				tokenizer.State = AfterAttributeValueQuoted
-				continue
-			}
+			tokenizer.parseAttributeValueSingleQuoted(r)
 
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.appendAttribute(
-				r,
-				/*isName = */ false,
-			)
-
+		// AttributeValueUnquoted ---> BeforeAttributeName
 		case AttributeValueUnquoted:
-			if r == ' ' {
-				tokenizer.State = BeforeAttributeName
-				continue
+			if token := tokenizer.parseAttributeValueUnquoted(r); token != nil {
+				return token
 			}
 
-			if r == '>' {
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
-			}
-
-			tokenizer.appendAttribute(
-				r,
-				/*isName = */ false,
-			)
-
+		// AfterAttributeValueQuoted ---> BeforeAttributeName | SelfClosingStartTag | Data
 		case AfterAttributeValueQuoted:
-			if r == ' ' {
-				tokenizer.State = BeforeAttributeName
-				continue
+			if token := tokenizer.parseAfterAttributeValueQuoted(r); token != nil {
+				return token
 			}
 
-			if r == '/' {
-				tokenizer.State = SelfClosingStartTag
-				continue
-			}
-
-			if r == '>' {
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
-			}
-
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			tokenizer.ReConsume = true
-			tokenizer.State = BeforeAttributeName
-			continue
-
+		// SelfClosingTag ---> Data
 		case SelfClosingStartTag:
-			if r == '>' {
-				tokenizer.setSelfClosingFlag()
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
+			if token := tokenizer.parseSelfClosingStartTag(r); token != nil {
+				return token
 			}
 
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
+		// ScriptData ---> ScriptDataLessThanSign
 		case ScriptData:
-			if r == '<' {
-				tokenizer.State = ScriptDataLessThanSign
-				continue
+			if token := tokenizer.parseScriptData(r); token != nil {
+				return token
 			}
 
-			if tokenizer.isEOF() {
-				return newEOFToken()
-			}
-
-			return newRuneToken(r)
-
+		// ScriptDataLessThanSign ---> ScriptDataEndTagOpen | ScriptData
 		case ScriptDataLessThanSign:
-			if r == '/' {
-				// reset buffer
-				tokenizer.Buf = ""
-				tokenizer.State = ScriptDataEndTagOpen
-				continue
+			if token := tokenizer.parseScriptDataLessThanSign(r); token != nil {
+				return token
 			}
 
-			tokenizer.ReConsume = true
-			tokenizer.State = ScriptData
-			return newRuneToken('<')
-
+		// ScriptDataEndTagOpen ---> ScriptDataEndTagName | ScriptData
 		case ScriptDataEndTagOpen:
-			if isAsciiAlphabetic(r) {
-				tokenizer.ReConsume = true
-				tokenizer.State = ScriptDataEndTagName
-				tokenizer.createTag(false)
-				continue
+			if token := tokenizer.parseScriptDataEndTagOpen(r); token != nil {
+				return token
 			}
 
-			tokenizer.ReConsume = true
-			tokenizer.State = ScriptData
-			// return "</", in the specifications
-			return newRuneToken('<')
-
+		// ScriptDataEndTagName ---> Data | TemporaryBuffer
 		case ScriptDataEndTagName:
-			if r == '>' {
-				tokenizer.State = Data
-				return tokenizer.takeLastToken()
+			if token := tokenizer.parseScriptDataEndTagName(r); token != nil {
+				return token
 			}
-
-			if isAsciiAlphabetic(r) {
-				tokenizer.Buf += string(r)
-				tokenizer.appendTagName(unicode.ToLower(r))
-				continue
-			}
-
-			tokenizer.State = TemporaryBuffer
-			tokenizer.Buf = "</" + tokenizer.Buf
-			tokenizer.Buf += string(r)
-			continue
 
 		// temporary for develop
 		case TemporaryBuffer:
-			tokenizer.ReConsume = true
-
-			if len(tokenizer.Buf) == 0 {
-				tokenizer.State = ScriptData
-				continue
+			if token := tokenizer.parseTemporaryBuffer(r); token != nil {
+				return token
 			}
-
-			// delete first letter
-			rr := []rune(tokenizer.Buf)
-			if len(rr) <= 0 {
-				panic("unexpected empty buffer")
-			}
-			tokenizer.Buf = string(rr[1:])
-			return newRuneToken(r)
 
 		default:
 			panic("unexpected state")
 		}
 	}
+}
+
+// Data ---> TagOpen
+func (tokenizer *HtmlTokenizer) parseData(r rune) *HtmlToken {
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	if r == '<' {
+		tokenizer.State = TagOpen
+		return nil
+	}
+
+	return newRuneToken(r)
+}
+
+// TagOpen ---> EndTagOpen | TagName
+//
+// just return nil
+func (tokenizer *HtmlTokenizer) parseTagOpen(r rune) *HtmlToken {
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	if r == '/' {
+		tokenizer.State = EndTagOpen
+		return nil
+	}
+
+	if isAsciiAlphabetic(r) {
+		tokenizer.ReConsume = true
+		tokenizer.State = TagName
+		tokenizer.createTag(true)
+		return nil
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = Data
+	return nil
+}
+
+// EndTagOpen ---> TagName
+func (tokenizer *HtmlTokenizer) parseEndTagOpen(r rune) *HtmlToken {
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	if isAsciiAlphabetic(r) {
+		tokenizer.ReConsume = true
+		tokenizer.State = TagName
+		tokenizer.createTag(false)
+		return nil
+	}
+
+	return nil
+}
+
+// TagName ---> BeforeAttributeName | SelfClosingStartTag | Data
+func (tokenizer *HtmlTokenizer) parseTagName(r rune) *HtmlToken {
+	if r == ' ' {
+		tokenizer.State = BeforeAttributeName
+		return nil
+	}
+
+	// EX: <img />
+	if r == '/' {
+		tokenizer.State = SelfClosingStartTag
+		return nil
+	}
+
+	if r == '>' {
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	if isAsciiAlphabetic(r) {
+		tokenizer.appendTagName(unicode.ToLower(r))
+		return nil
+	}
+
+	tokenizer.appendTagName(r)
+	return nil
+}
+
+// BeforeAttributeName ---> AfterAttributeName | AttributeName
+func (tokenizer *HtmlTokenizer) parseBeforeAttributeName(r rune) *HtmlToken {
+	if r == '/' || r == '>' || tokenizer.isEOF() {
+		tokenizer.ReConsume = true
+		tokenizer.State = AfterAttributeName
+		return nil
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = AttributeName
+	tokenizer.startNewAttribute()
+	return nil
+}
+
+// AttributeName ---> AfterAttributeName | BeforeAttributeValue
+//
+// just return nil
+func (tokenizer *HtmlTokenizer) parseAttributeName(r rune) *HtmlToken {
+	if r == '/' || r == '>' || tokenizer.isEOF() {
+		tokenizer.ReConsume = true
+		tokenizer.State = AfterAttributeName
+		return nil
+	}
+
+	if r == '=' {
+		tokenizer.State = BeforeAttributeValue
+		return nil
+	}
+
+	if isAsciiAlphabetic(r) {
+		tokenizer.appendAttribute(
+			unicode.ToLower(r),
+			/*isName = */ true,
+		)
+		return nil
+	}
+
+	tokenizer.appendAttribute(
+		r,
+		/*isName = */ true,
+	)
+	return nil
+}
+
+// AfterAttributeName ---> SelfClosingStartTag | Data | BeforeAttributeValue
+func (tokenizer *HtmlTokenizer) parseAfterAttributeName(r rune) *HtmlToken {
+	if r == ' ' {
+		return nil
+	}
+
+	if r == '/' {
+		tokenizer.State = SelfClosingStartTag
+		return nil
+	}
+
+	if r == '>' {
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	if r == '=' {
+		tokenizer.State = BeforeAttributeValue
+		return nil
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = Data
+	tokenizer.startNewAttribute()
+	return nil
+}
+
+// BeforeAttributeValue ---> AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
+//
+// just return nil
+func (tokenizer *HtmlTokenizer) parseBeforeAttributeValue(r rune) *HtmlToken {
+	if r == ' ' {
+		return nil
+	}
+
+	if r == '"' {
+		tokenizer.State = AttributeValueDoubleQuoted
+		return nil
+	}
+
+	if r == '\'' {
+		tokenizer.State = AttributeValueSingleQuoted
+		return nil
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = AttributeValueUnquoted
+	return nil
+}
+
+// AttributeValueDoubleQuoted ---> AfterAttributeValueQuoted
+func (tokenizer *HtmlTokenizer) parseAttributeValueDoubleQuoted(r rune) *HtmlToken {
+	if r == '"' {
+		tokenizer.State = AfterAttributeValueQuoted
+		return nil
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	tokenizer.appendAttribute(
+		r,
+		/*isName = */ false,
+	)
+	return nil
+}
+
+// AttributeValueSingleQuoted ---> AfterAttributeValueQuoted
+func (tokenizer *HtmlTokenizer) parseAttributeValueSingleQuoted(r rune) *HtmlToken {
+	if r == '\'' {
+		tokenizer.State = AfterAttributeValueQuoted
+		return nil
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	tokenizer.appendAttribute(
+		r,
+		/*isName = */ false,
+	)
+	return nil
+}
+
+// AttributeValueUnquoted ---> BeforeAttributeName
+func (tokenizer *HtmlTokenizer) parseAttributeValueUnquoted(r rune) *HtmlToken {
+	if r == ' ' {
+		tokenizer.State = BeforeAttributeName
+		return nil
+	}
+
+	if r == '>' {
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	tokenizer.appendAttribute(
+		r,
+		/*isName = */ false,
+	)
+	return nil
+}
+
+// AfterAttributeValueQuoted ---> BeforeAttributeName | SelfClosingStartTag | Data
+func (tokenizer *HtmlTokenizer) parseAfterAttributeValueQuoted(r rune) *HtmlToken {
+	if r == ' ' {
+		tokenizer.State = BeforeAttributeName
+		return nil
+	}
+
+	if r == '/' {
+		tokenizer.State = SelfClosingStartTag
+		return nil
+	}
+
+	if r == '>' {
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = BeforeAttributeName
+	return nil
+}
+
+// SelfClosingTag ---> Data
+func (tokenizer *HtmlTokenizer) parseSelfClosingStartTag(r rune) *HtmlToken {
+	if r == '>' {
+		tokenizer.setSelfClosingFlag()
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	return nil
+}
+
+// ScriptData ---> ScriptDataLessThanSign
+func (tokenizer *HtmlTokenizer) parseScriptData(r rune) *HtmlToken {
+	if r == '<' {
+		tokenizer.State = ScriptDataLessThanSign
+		return nil
+	}
+
+	if tokenizer.isEOF() {
+		return newEOFToken()
+	}
+
+	return newRuneToken(r)
+}
+
+// ScriptDataLessThanSign ---> ScriptDataEndTagOpen | ScriptData
+func (tokenizer *HtmlTokenizer) parseScriptDataLessThanSign(r rune) *HtmlToken {
+	if r == '/' {
+		// reset buffer
+		tokenizer.Buf = ""
+		tokenizer.State = ScriptDataEndTagOpen
+		return nil
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = ScriptData
+	return newRuneToken('<')
+}
+
+// ScriptDataEndTagOpen ---> ScriptDataEndTagName | ScriptData
+func (tokenizer *HtmlTokenizer) parseScriptDataEndTagOpen(r rune) *HtmlToken {
+	if isAsciiAlphabetic(r) {
+		tokenizer.ReConsume = true
+		tokenizer.State = ScriptDataEndTagName
+		tokenizer.createTag(false)
+		return nil
+	}
+
+	tokenizer.ReConsume = true
+	tokenizer.State = ScriptData
+	// return "</", in the specifications
+	return newRuneToken('<')
+}
+
+// ScriptDataEndTagName ---> Data | TemporaryBuffer
+func (tokenizer *HtmlTokenizer) parseScriptDataEndTagName(r rune) *HtmlToken {
+	if r == '>' {
+		tokenizer.State = Data
+		return tokenizer.takeLastToken()
+	}
+
+	if isAsciiAlphabetic(r) {
+		tokenizer.Buf += string(r)
+		tokenizer.appendTagName(unicode.ToLower(r))
+		return nil
+	}
+
+	tokenizer.State = TemporaryBuffer
+	tokenizer.Buf = "</" + tokenizer.Buf
+	tokenizer.Buf += string(r)
+	return nil
+}
+
+// TemporaryBuffer ---> ScriptData
+func (tokenizer *HtmlTokenizer) parseTemporaryBuffer(r rune) *HtmlToken {
+	tokenizer.ReConsume = true
+
+	if len(tokenizer.Buf) == 0 {
+		tokenizer.State = ScriptData
+		return nil
+	}
+
+	// delete first letter
+	rr := []rune(tokenizer.Buf)
+	if len(rr) <= 0 {
+		panic("unexpected empty buffer")
+	}
+	tokenizer.Buf = string(rr[1:])
+	return newRuneToken(r)
 }
 
 func (tokenizer *HtmlTokenizer) consumeNextInput() rune {
