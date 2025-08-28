@@ -160,8 +160,12 @@ func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
 	}
 }
 
-// Data ---> TagOpen
+// Data ---> Self | TagOpen
 func (tokenizer *HtmlTokenizer) parseData(r rune) *HtmlToken {
+	if tokenizer.State != Data {
+		panic("unexpected state")
+	}
+
 	if tokenizer.isEOF() {
 		return newEOFToken()
 	}
@@ -174,10 +178,14 @@ func (tokenizer *HtmlTokenizer) parseData(r rune) *HtmlToken {
 	return newRuneToken(r)
 }
 
-// TagOpen ---> EndTagOpen | TagName
+// TagOpen ---> Self | EndTagOpen | TagName
 //
 // just return nil
 func (tokenizer *HtmlTokenizer) parseTagOpen(r rune) *HtmlToken {
+	if tokenizer.State != TagOpen {
+		panic("unexpected state")
+	}
+
 	if tokenizer.isEOF() {
 		return newEOFToken()
 	}
@@ -199,8 +207,12 @@ func (tokenizer *HtmlTokenizer) parseTagOpen(r rune) *HtmlToken {
 	return nil
 }
 
-// EndTagOpen ---> TagName
+// EndTagOpen ---> Self | TagName
 func (tokenizer *HtmlTokenizer) parseEndTagOpen(r rune) *HtmlToken {
+	if tokenizer.State != EndTagOpen {
+		panic("unexpected state")
+	}
+
 	if tokenizer.isEOF() {
 		return newEOFToken()
 	}
@@ -215,8 +227,12 @@ func (tokenizer *HtmlTokenizer) parseEndTagOpen(r rune) *HtmlToken {
 	return nil
 }
 
-// TagName ---> BeforeAttributeName | SelfClosingStartTag | Data
+// TagName ---> Self | BeforeAttributeName | SelfClosingStartTag | Data
 func (tokenizer *HtmlTokenizer) parseTagName(r rune) *HtmlToken {
+	if tokenizer.State != TagName {
+		panic("unexpected state")
+	}
+
 	if r == ' ' {
 		tokenizer.State = BeforeAttributeName
 		return nil
@@ -248,6 +264,10 @@ func (tokenizer *HtmlTokenizer) parseTagName(r rune) *HtmlToken {
 
 // BeforeAttributeName ---> AfterAttributeName | AttributeName
 func (tokenizer *HtmlTokenizer) parseBeforeAttributeName(r rune) *HtmlToken {
+	if tokenizer.State != BeforeAttributeName {
+		panic("unexpected state")
+	}
+
 	if r == '/' || r == '>' || tokenizer.isEOF() {
 		tokenizer.ReConsume = true
 		tokenizer.State = AfterAttributeName
@@ -260,10 +280,14 @@ func (tokenizer *HtmlTokenizer) parseBeforeAttributeName(r rune) *HtmlToken {
 	return nil
 }
 
-// AttributeName ---> AfterAttributeName | BeforeAttributeValue
+// AttributeName ---> Self | AfterAttributeName | BeforeAttributeValue
 //
 // just return nil
 func (tokenizer *HtmlTokenizer) parseAttributeName(r rune) *HtmlToken {
+	if tokenizer.State != AttributeName {
+		panic("unexpected state")
+	}
+
 	if r == '/' || r == '>' || tokenizer.isEOF() {
 		tokenizer.ReConsume = true
 		tokenizer.State = AfterAttributeName
@@ -290,8 +314,12 @@ func (tokenizer *HtmlTokenizer) parseAttributeName(r rune) *HtmlToken {
 	return nil
 }
 
-// AfterAttributeName ---> SelfClosingStartTag | Data | BeforeAttributeValue
+// AfterAttributeName ---> Self | SelfClosingStartTag | Data | BeforeAttributeValue
 func (tokenizer *HtmlTokenizer) parseAfterAttributeName(r rune) *HtmlToken {
+	if tokenizer.State != AfterAttributeName {
+		panic("unexpected state")
+	}
+
 	if r == ' ' {
 		return nil
 	}
@@ -321,10 +349,14 @@ func (tokenizer *HtmlTokenizer) parseAfterAttributeName(r rune) *HtmlToken {
 	return nil
 }
 
-// BeforeAttributeValue ---> AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
+// BeforeAttributeValue ---> Self | AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
 //
 // just return nil
 func (tokenizer *HtmlTokenizer) parseBeforeAttributeValue(r rune) *HtmlToken {
+	if tokenizer.State != BeforeAttributeValue {
+		panic("unexpected state")
+	}
+
 	if r == ' ' {
 		return nil
 	}
@@ -346,6 +378,10 @@ func (tokenizer *HtmlTokenizer) parseBeforeAttributeValue(r rune) *HtmlToken {
 
 // AttributeValueDoubleQuoted ---> AfterAttributeValueQuoted
 func (tokenizer *HtmlTokenizer) parseAttributeValueDoubleQuoted(r rune) *HtmlToken {
+	if tokenizer.State != AttributeValueDoubleQuoted {
+		panic("unexpected state")
+	}
+
 	if r == '"' {
 		tokenizer.State = AfterAttributeValueQuoted
 		return nil
@@ -362,8 +398,12 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueDoubleQuoted(r rune) *HtmlTok
 	return nil
 }
 
-// AttributeValueSingleQuoted ---> AfterAttributeValueQuoted
+// AttributeValueSingleQuoted ---> Self | AfterAttributeValueQuoted
 func (tokenizer *HtmlTokenizer) parseAttributeValueSingleQuoted(r rune) *HtmlToken {
+	if tokenizer.State != AttributeValueSingleQuoted {
+		panic("unexpected state")
+	}
+
 	if r == '\'' {
 		tokenizer.State = AfterAttributeValueQuoted
 		return nil
@@ -380,8 +420,12 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueSingleQuoted(r rune) *HtmlTok
 	return nil
 }
 
-// AttributeValueUnquoted ---> BeforeAttributeName
+// AttributeValueUnquoted ---> Self | BeforeAttributeName
 func (tokenizer *HtmlTokenizer) parseAttributeValueUnquoted(r rune) *HtmlToken {
+	if tokenizer.State != AttributeValueUnquoted {
+		panic("unexpected state")
+	}
+
 	if r == ' ' {
 		tokenizer.State = BeforeAttributeName
 		return nil
@@ -399,8 +443,12 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueUnquoted(r rune) *HtmlToken {
 	return nil
 }
 
-// AfterAttributeValueQuoted ---> BeforeAttributeName | SelfClosingStartTag | Data
+// AfterAttributeValueQuoted ---> Self | BeforeAttributeName | SelfClosingStartTag | Data
 func (tokenizer *HtmlTokenizer) parseAfterAttributeValueQuoted(r rune) *HtmlToken {
+	if tokenizer.State != AfterAttributeValueQuoted {
+		panic("unexpected state")
+	}
+
 	if r == ' ' {
 		tokenizer.State = BeforeAttributeName
 		return nil
@@ -425,8 +473,12 @@ func (tokenizer *HtmlTokenizer) parseAfterAttributeValueQuoted(r rune) *HtmlToke
 	return nil
 }
 
-// SelfClosingTag ---> Data
+// SelfClosingTag ---> Self | Data
 func (tokenizer *HtmlTokenizer) parseSelfClosingStartTag(r rune) *HtmlToken {
+	if tokenizer.State != SelfClosingStartTag {
+		panic("unexpected state")
+	}
+
 	if r == '>' {
 		tokenizer.setSelfClosingFlag()
 		tokenizer.State = Data
@@ -440,8 +492,12 @@ func (tokenizer *HtmlTokenizer) parseSelfClosingStartTag(r rune) *HtmlToken {
 	return nil
 }
 
-// ScriptData ---> ScriptDataLessThanSign
+// ScriptData ---> Self | ScriptDataLessThanSign
 func (tokenizer *HtmlTokenizer) parseScriptData(r rune) *HtmlToken {
+	if tokenizer.State != ScriptData {
+		panic("unexpected state")
+	}
+
 	if r == '<' {
 		tokenizer.State = ScriptDataLessThanSign
 		return nil
@@ -456,6 +512,10 @@ func (tokenizer *HtmlTokenizer) parseScriptData(r rune) *HtmlToken {
 
 // ScriptDataLessThanSign ---> ScriptDataEndTagOpen | ScriptData
 func (tokenizer *HtmlTokenizer) parseScriptDataLessThanSign(r rune) *HtmlToken {
+	if tokenizer.State != ScriptDataLessThanSign {
+		panic("unexpected state")
+	}
+
 	if r == '/' {
 		// reset buffer
 		tokenizer.Buf = ""
@@ -470,6 +530,10 @@ func (tokenizer *HtmlTokenizer) parseScriptDataLessThanSign(r rune) *HtmlToken {
 
 // ScriptDataEndTagOpen ---> ScriptDataEndTagName | ScriptData
 func (tokenizer *HtmlTokenizer) parseScriptDataEndTagOpen(r rune) *HtmlToken {
+	if tokenizer.State != ScriptDataEndTagOpen {
+		panic("unexpected state")
+	}
+
 	if isAsciiAlphabetic(r) {
 		tokenizer.ReConsume = true
 		tokenizer.State = ScriptDataEndTagName
@@ -483,8 +547,12 @@ func (tokenizer *HtmlTokenizer) parseScriptDataEndTagOpen(r rune) *HtmlToken {
 	return newRuneToken('<')
 }
 
-// ScriptDataEndTagName ---> Data | TemporaryBuffer
+// ScriptDataEndTagName ---> Self | Data | TemporaryBuffer
 func (tokenizer *HtmlTokenizer) parseScriptDataEndTagName(r rune) *HtmlToken {
+	if tokenizer.State != ScriptDataEndTagName {
+		panic("unexpected state")
+	}
+
 	if r == '>' {
 		tokenizer.State = Data
 		return tokenizer.takeLastToken()
@@ -502,8 +570,12 @@ func (tokenizer *HtmlTokenizer) parseScriptDataEndTagName(r rune) *HtmlToken {
 	return nil
 }
 
-// TemporaryBuffer ---> ScriptData
+// TemporaryBuffer ---> Self | ScriptData
 func (tokenizer *HtmlTokenizer) parseTemporaryBuffer(r rune) *HtmlToken {
+	if tokenizer.State != TemporaryBuffer {
+		panic("unexpected state")
+	}
+
 	tokenizer.ReConsume = true
 
 	if len(tokenizer.Buf) == 0 {
@@ -513,9 +585,6 @@ func (tokenizer *HtmlTokenizer) parseTemporaryBuffer(r rune) *HtmlToken {
 
 	// delete first letter
 	rr := []rune(tokenizer.Buf)
-	if len(rr) <= 0 {
-		panic("unexpected empty buffer")
-	}
 	tokenizer.Buf = string(rr[1:])
 	return newRuneToken(r)
 }
