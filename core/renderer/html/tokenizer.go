@@ -6,7 +6,7 @@ import (
 
 type IHtmlTokenizer interface {
 	/*
-		parse html to make token
+		tokenize html to make token
 			- increment letter one by one
 			- change state
 			- create token & return it
@@ -53,104 +53,104 @@ func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
 		switch tokenizer.State {
 		// Data ---> TagOpen
 		case Data:
-			if token := tokenizer.parseData(r); token != nil {
+			if token := tokenizer.tokenizeData(r); token != nil {
 				return token
 			}
 
 		// TagOpen ---> EndTagOpen | TagName
 		case TagOpen:
 			// this just return nil
-			tokenizer.parseTagOpen(r)
+			tokenizer.tokenizeTagOpen(r)
 
 		// EndTagOpen ---> TagName
 		case EndTagOpen:
-			if token := tokenizer.parseEndTagOpen(r); token != nil {
+			if token := tokenizer.tokenizeEndTagOpen(r); token != nil {
 				return token
 			}
 
 		// TagName ---> BeforeAttributeName | SelfClosingStartTag | Data
 		case TagName:
-			if token := tokenizer.parseTagName(r); token != nil {
+			if token := tokenizer.tokenizeTagName(r); token != nil {
 				return token
 			}
 
 		// BeforeAttributeName ---> AfterAttributeName | AttributeName
 		case BeforeAttributeName:
-			if token := tokenizer.parseBeforeAttributeName(r); token != nil {
+			if token := tokenizer.tokenizeBeforeAttributeName(r); token != nil {
 				return token
 			}
 
 		// AttributeName ---> AfterAttributeName | BeforeAttributeValue
 		case AttributeName:
 			// just return nil
-			tokenizer.parseAttributeName(r)
+			tokenizer.tokenizeAttributeName(r)
 
 		// AfterAttributeName ---> SelfClosingStartTag | Data | BeforeAttributeValue
 		case AfterAttributeName:
-			if token := tokenizer.parseAfterAttributeName(r); token != nil {
+			if token := tokenizer.tokenizeAfterAttributeName(r); token != nil {
 				return token
 			}
 
 		//  BeforeAttributeValue ---> AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
 		case BeforeAttributeValue:
 			// just return nil
-			tokenizer.parseBeforeAttributeValue(r)
+			tokenizer.tokenizeBeforeAttributeValue(r)
 
 		// AttributeValueDoubleQuoted ---> AfterAttributeValueQuoted
 		case AttributeValueDoubleQuoted:
-			if token := tokenizer.parseAttributeValueDoubleQuoted(r); token != nil {
+			if token := tokenizer.tokenizeAttributeValueDoubleQuoted(r); token != nil {
 				return token
 			}
 
 		// AttributeValueSingleQuoted ---> AfterAttributeValueQuoted
 		case AttributeValueSingleQuoted:
-			tokenizer.parseAttributeValueSingleQuoted(r)
+			tokenizer.tokenizeAttributeValueSingleQuoted(r)
 
 		// AttributeValueUnquoted ---> BeforeAttributeName
 		case AttributeValueUnquoted:
-			if token := tokenizer.parseAttributeValueUnquoted(r); token != nil {
+			if token := tokenizer.tokenizeAttributeValueUnquoted(r); token != nil {
 				return token
 			}
 
 		// AfterAttributeValueQuoted ---> BeforeAttributeName | SelfClosingStartTag | Data
 		case AfterAttributeValueQuoted:
-			if token := tokenizer.parseAfterAttributeValueQuoted(r); token != nil {
+			if token := tokenizer.tokenizeAfterAttributeValueQuoted(r); token != nil {
 				return token
 			}
 
 		// SelfClosingTag ---> Data
 		case SelfClosingStartTag:
-			if token := tokenizer.parseSelfClosingStartTag(r); token != nil {
+			if token := tokenizer.tokenizeSelfClosingStartTag(r); token != nil {
 				return token
 			}
 
 		// ScriptData ---> ScriptDataLessThanSign
 		case ScriptData:
-			if token := tokenizer.parseScriptData(r); token != nil {
+			if token := tokenizer.tokenizeScriptData(r); token != nil {
 				return token
 			}
 
 		// ScriptDataLessThanSign ---> ScriptDataEndTagOpen | ScriptData
 		case ScriptDataLessThanSign:
-			if token := tokenizer.parseScriptDataLessThanSign(r); token != nil {
+			if token := tokenizer.tokenizeScriptDataLessThanSign(r); token != nil {
 				return token
 			}
 
 		// ScriptDataEndTagOpen ---> ScriptDataEndTagName | ScriptData
 		case ScriptDataEndTagOpen:
-			if token := tokenizer.parseScriptDataEndTagOpen(r); token != nil {
+			if token := tokenizer.tokenizeScriptDataEndTagOpen(r); token != nil {
 				return token
 			}
 
 		// ScriptDataEndTagName ---> Data | TemporaryBuffer
 		case ScriptDataEndTagName:
-			if token := tokenizer.parseScriptDataEndTagName(r); token != nil {
+			if token := tokenizer.tokenizeScriptDataEndTagName(r); token != nil {
 				return token
 			}
 
 		// temporary for develop
 		case TemporaryBuffer:
-			if token := tokenizer.parseTemporaryBuffer(r); token != nil {
+			if token := tokenizer.tokenizeTemporaryBuffer(r); token != nil {
 				return token
 			}
 
@@ -161,7 +161,7 @@ func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
 }
 
 // Data ---> Self | TagOpen
-func (tokenizer *HtmlTokenizer) parseData(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeData(r rune) *HtmlToken {
 	if tokenizer.State != Data {
 		panic("unexpected state")
 	}
@@ -181,7 +181,7 @@ func (tokenizer *HtmlTokenizer) parseData(r rune) *HtmlToken {
 // TagOpen ---> Self | EndTagOpen | TagName
 //
 // just return nil
-func (tokenizer *HtmlTokenizer) parseTagOpen(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeTagOpen(r rune) *HtmlToken {
 	if tokenizer.State != TagOpen {
 		panic("unexpected state")
 	}
@@ -208,7 +208,7 @@ func (tokenizer *HtmlTokenizer) parseTagOpen(r rune) *HtmlToken {
 }
 
 // EndTagOpen ---> Self | TagName
-func (tokenizer *HtmlTokenizer) parseEndTagOpen(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeEndTagOpen(r rune) *HtmlToken {
 	if tokenizer.State != EndTagOpen {
 		panic("unexpected state")
 	}
@@ -228,7 +228,7 @@ func (tokenizer *HtmlTokenizer) parseEndTagOpen(r rune) *HtmlToken {
 }
 
 // TagName ---> Self | BeforeAttributeName | SelfClosingStartTag | Data
-func (tokenizer *HtmlTokenizer) parseTagName(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeTagName(r rune) *HtmlToken {
 	if tokenizer.State != TagName {
 		panic("unexpected state")
 	}
@@ -263,7 +263,7 @@ func (tokenizer *HtmlTokenizer) parseTagName(r rune) *HtmlToken {
 }
 
 // BeforeAttributeName ---> AfterAttributeName | AttributeName
-func (tokenizer *HtmlTokenizer) parseBeforeAttributeName(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeBeforeAttributeName(r rune) *HtmlToken {
 	if tokenizer.State != BeforeAttributeName {
 		panic("unexpected state")
 	}
@@ -283,7 +283,7 @@ func (tokenizer *HtmlTokenizer) parseBeforeAttributeName(r rune) *HtmlToken {
 // AttributeName ---> Self | AfterAttributeName | BeforeAttributeValue
 //
 // just return nil
-func (tokenizer *HtmlTokenizer) parseAttributeName(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAttributeName(r rune) *HtmlToken {
 	if tokenizer.State != AttributeName {
 		panic("unexpected state")
 	}
@@ -315,7 +315,7 @@ func (tokenizer *HtmlTokenizer) parseAttributeName(r rune) *HtmlToken {
 }
 
 // AfterAttributeName ---> Self | SelfClosingStartTag | Data | BeforeAttributeValue
-func (tokenizer *HtmlTokenizer) parseAfterAttributeName(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAfterAttributeName(r rune) *HtmlToken {
 	if tokenizer.State != AfterAttributeName {
 		panic("unexpected state")
 	}
@@ -352,7 +352,7 @@ func (tokenizer *HtmlTokenizer) parseAfterAttributeName(r rune) *HtmlToken {
 // BeforeAttributeValue ---> Self | AttributeValueDoubleQuoted | AttributeValueSingleQuoted | AttributeValueUnquoted
 //
 // just return nil
-func (tokenizer *HtmlTokenizer) parseBeforeAttributeValue(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeBeforeAttributeValue(r rune) *HtmlToken {
 	if tokenizer.State != BeforeAttributeValue {
 		panic("unexpected state")
 	}
@@ -377,7 +377,7 @@ func (tokenizer *HtmlTokenizer) parseBeforeAttributeValue(r rune) *HtmlToken {
 }
 
 // AttributeValueDoubleQuoted ---> AfterAttributeValueQuoted
-func (tokenizer *HtmlTokenizer) parseAttributeValueDoubleQuoted(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAttributeValueDoubleQuoted(r rune) *HtmlToken {
 	if tokenizer.State != AttributeValueDoubleQuoted {
 		panic("unexpected state")
 	}
@@ -399,7 +399,7 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueDoubleQuoted(r rune) *HtmlTok
 }
 
 // AttributeValueSingleQuoted ---> Self | AfterAttributeValueQuoted
-func (tokenizer *HtmlTokenizer) parseAttributeValueSingleQuoted(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAttributeValueSingleQuoted(r rune) *HtmlToken {
 	if tokenizer.State != AttributeValueSingleQuoted {
 		panic("unexpected state")
 	}
@@ -421,7 +421,7 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueSingleQuoted(r rune) *HtmlTok
 }
 
 // AttributeValueUnquoted ---> Self | BeforeAttributeName
-func (tokenizer *HtmlTokenizer) parseAttributeValueUnquoted(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAttributeValueUnquoted(r rune) *HtmlToken {
 	if tokenizer.State != AttributeValueUnquoted {
 		panic("unexpected state")
 	}
@@ -444,7 +444,7 @@ func (tokenizer *HtmlTokenizer) parseAttributeValueUnquoted(r rune) *HtmlToken {
 }
 
 // AfterAttributeValueQuoted ---> Self | BeforeAttributeName | SelfClosingStartTag | Data
-func (tokenizer *HtmlTokenizer) parseAfterAttributeValueQuoted(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeAfterAttributeValueQuoted(r rune) *HtmlToken {
 	if tokenizer.State != AfterAttributeValueQuoted {
 		panic("unexpected state")
 	}
@@ -474,7 +474,7 @@ func (tokenizer *HtmlTokenizer) parseAfterAttributeValueQuoted(r rune) *HtmlToke
 }
 
 // SelfClosingTag ---> Self | Data
-func (tokenizer *HtmlTokenizer) parseSelfClosingStartTag(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeSelfClosingStartTag(r rune) *HtmlToken {
 	if tokenizer.State != SelfClosingStartTag {
 		panic("unexpected state")
 	}
@@ -493,7 +493,7 @@ func (tokenizer *HtmlTokenizer) parseSelfClosingStartTag(r rune) *HtmlToken {
 }
 
 // ScriptData ---> Self | ScriptDataLessThanSign
-func (tokenizer *HtmlTokenizer) parseScriptData(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeScriptData(r rune) *HtmlToken {
 	if tokenizer.State != ScriptData {
 		panic("unexpected state")
 	}
@@ -511,7 +511,7 @@ func (tokenizer *HtmlTokenizer) parseScriptData(r rune) *HtmlToken {
 }
 
 // ScriptDataLessThanSign ---> ScriptDataEndTagOpen | ScriptData
-func (tokenizer *HtmlTokenizer) parseScriptDataLessThanSign(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeScriptDataLessThanSign(r rune) *HtmlToken {
 	if tokenizer.State != ScriptDataLessThanSign {
 		panic("unexpected state")
 	}
@@ -529,7 +529,7 @@ func (tokenizer *HtmlTokenizer) parseScriptDataLessThanSign(r rune) *HtmlToken {
 }
 
 // ScriptDataEndTagOpen ---> ScriptDataEndTagName | ScriptData
-func (tokenizer *HtmlTokenizer) parseScriptDataEndTagOpen(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeScriptDataEndTagOpen(r rune) *HtmlToken {
 	if tokenizer.State != ScriptDataEndTagOpen {
 		panic("unexpected state")
 	}
@@ -548,7 +548,7 @@ func (tokenizer *HtmlTokenizer) parseScriptDataEndTagOpen(r rune) *HtmlToken {
 }
 
 // ScriptDataEndTagName ---> Self | Data | TemporaryBuffer
-func (tokenizer *HtmlTokenizer) parseScriptDataEndTagName(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeScriptDataEndTagName(r rune) *HtmlToken {
 	if tokenizer.State != ScriptDataEndTagName {
 		panic("unexpected state")
 	}
@@ -571,7 +571,7 @@ func (tokenizer *HtmlTokenizer) parseScriptDataEndTagName(r rune) *HtmlToken {
 }
 
 // TemporaryBuffer ---> Self | ScriptData
-func (tokenizer *HtmlTokenizer) parseTemporaryBuffer(r rune) *HtmlToken {
+func (tokenizer *HtmlTokenizer) tokenizeTemporaryBuffer(r rune) *HtmlToken {
 	if tokenizer.State != TemporaryBuffer {
 		panic("unexpected state")
 	}

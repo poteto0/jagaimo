@@ -203,7 +203,7 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseData(t *testing.T) {
+func TestHtmlTokenizer_tokenizeData(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -217,7 +217,7 @@ func TestHtmlTokenizer_parseData(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act
-			result := tokenizer.parseData(rune(0))
+			result := tokenizer.tokenizeData(rune(0))
 
 			// Assert
 			assert.Equal(t, newEOFToken(), result)
@@ -228,7 +228,7 @@ func TestHtmlTokenizer_parseData(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseData('<'))
+			assert.Nil(t, tokenizer.tokenizeData('<'))
 			assert.Equal(t, TagOpen, tokenizer.State)
 		})
 
@@ -237,7 +237,7 @@ func TestHtmlTokenizer_parseData(t *testing.T) {
 			tokenizer := init()
 
 			// Act
-			result := tokenizer.parseData('a')
+			result := tokenizer.tokenizeData('a')
 
 			// Assert
 			assert.Equal(t, newRuneToken('a'), result)
@@ -271,7 +271,7 @@ func TestHtmlTokenizer_parseData(t *testing.T) {
 				tokenizer.State = it.state
 
 				// Act
-				tokenizer.parseData(it.r)
+				tokenizer.tokenizeData(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -280,7 +280,7 @@ func TestHtmlTokenizer_parseData(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
+func TestHtmlTokenizer_tokenizeTagOpen(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -294,7 +294,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act
-			result := tokenizer.parseTagOpen(rune(0))
+			result := tokenizer.tokenizeTagOpen(rune(0))
 
 			// Assert
 			assert.Equal(t, newEOFToken(), result)
@@ -305,7 +305,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagOpen('/'))
+			assert.Nil(t, tokenizer.tokenizeTagOpen('/'))
 			assert.Equal(t, EndTagOpen, tokenizer.State)
 		})
 
@@ -314,7 +314,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagOpen('a'))
+			assert.Nil(t, tokenizer.tokenizeTagOpen('a'))
 			assert.Equal(t, TagName, tokenizer.State)
 			assert.True(t, tokenizer.ReConsume)
 			assert.NotNil(t, tokenizer.LatestToken)
@@ -325,7 +325,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagOpen('@'))
+			assert.Nil(t, tokenizer.tokenizeTagOpen('@'))
 			assert.Equal(t, tokenizer.State, Data)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -358,7 +358,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 				tokenizer.State = it.state
 
 				// Act
-				tokenizer.parseTagOpen(it.r)
+				tokenizer.tokenizeTagOpen(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -367,7 +367,7 @@ func TestHtmlTokenizer_parseTagOpen(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
+func TestHtmlTokenizer_tokenizeEndTagOpen(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -381,7 +381,7 @@ func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act
-			result := tokenizer.parseEndTagOpen(rune(0))
+			result := tokenizer.tokenizeEndTagOpen(rune(0))
 
 			// Assert
 			assert.Equal(t, newEOFToken(), result)
@@ -392,7 +392,7 @@ func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseEndTagOpen('a'))
+			assert.Nil(t, tokenizer.tokenizeEndTagOpen('a'))
 			assert.Equal(t, TagName, tokenizer.State)
 			assert.NotNil(t, tokenizer.LatestToken)
 		})
@@ -402,7 +402,7 @@ func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseEndTagOpen('/'))
+			assert.Nil(t, tokenizer.tokenizeEndTagOpen('/'))
 			assert.Equal(t, EndTagOpen, tokenizer.State)
 		})
 	})
@@ -434,7 +434,7 @@ func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
 				tokenizer.State = it.state
 
 				// Act
-				tokenizer.parseEndTagOpen(it.r)
+				tokenizer.tokenizeEndTagOpen(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -443,7 +443,7 @@ func TestHtmlTokenizer_parseEndTagOpen(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseTagName(t *testing.T) {
+func TestHtmlTokenizer_tokenizeTagName(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -456,7 +456,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagName(' '))
+			assert.Nil(t, tokenizer.tokenizeTagName(' '))
 			assert.Equal(t, BeforeAttributeName, tokenizer.State)
 		})
 
@@ -465,7 +465,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagName('/'))
+			assert.Nil(t, tokenizer.tokenizeTagName('/'))
 			assert.Equal(t, SelfClosingStartTag, tokenizer.State)
 		})
 
@@ -476,7 +476,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			tokenizer.LatestToken = expected
 
 			// Act
-			result := tokenizer.parseTagName('>')
+			result := tokenizer.tokenizeTagName('>')
 
 			// Assert
 			assert.Equal(t, Data, tokenizer.State)
@@ -489,7 +489,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Equal(t, newEOFToken(), tokenizer.parseTagName(rune(0)))
+			assert.Equal(t, newEOFToken(), tokenizer.tokenizeTagName(rune(0)))
 		})
 
 		t.Run("if a-zA-Z, append to the tag name", func(t *testing.T) {
@@ -502,7 +502,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagName('a'))
+			assert.Nil(t, tokenizer.tokenizeTagName('a'))
 			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Tag)
 		})
 
@@ -516,7 +516,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTagName('@'))
+			assert.Nil(t, tokenizer.tokenizeTagName('@'))
 			assert.Equal(t, "@", tokenizer.LatestToken.StartTag.Tag)
 		})
 	})
@@ -548,7 +548,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 				tokenizer.State = it.state
 
 				// Act
-				tokenizer.parseTagName(it.r)
+				tokenizer.tokenizeTagName(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -557,7 +557,7 @@ func TestHtmlTokenizer_parseTagName(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
+func TestHtmlTokenizer_tokenizeBeforeAttributeName(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -575,7 +575,7 @@ func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
 				tokenizer := init()
 
 				// Act & Assert
-				assert.Nil(t, tokenizer.parseBeforeAttributeName(it.r))
+				assert.Nil(t, tokenizer.tokenizeBeforeAttributeName(it.r))
 				assert.Equal(t, tokenizer.State, AfterAttributeName)
 			}
 		})
@@ -586,7 +586,7 @@ func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeName(rune(0)))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeName(rune(0)))
 			assert.Equal(t, tokenizer.State, AfterAttributeName)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -601,7 +601,7 @@ func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeName('a'))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeName('a'))
 			assert.Equal(t, tokenizer.State, AttributeName)
 			assert.True(t, tokenizer.ReConsume)
 			assert.Equal(t, len(tokenizer.LatestToken.StartTag.Attributes), 1)
@@ -635,7 +635,7 @@ func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
 				tokenizer.State = it.state
 
 				// Act
-				tokenizer.parseBeforeAttributeName(it.r)
+				tokenizer.tokenizeBeforeAttributeName(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -644,7 +644,7 @@ func TestHtmlTokenizer_parseBeforeAttributeName(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAttributeName(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -657,7 +657,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeName('/'))
+			assert.Nil(t, tokenizer.tokenizeAttributeName('/'))
 			assert.Equal(t, AfterAttributeName, tokenizer.State)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -667,7 +667,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeName('='))
+			assert.Nil(t, tokenizer.tokenizeAttributeName('='))
 			assert.Equal(t, BeforeAttributeValue, tokenizer.State)
 		})
 
@@ -683,7 +683,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeName('A'))
+			assert.Nil(t, tokenizer.tokenizeAttributeName('A'))
 			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].name)
 		})
 
@@ -699,7 +699,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 			}
 
 			// Act
-			tokenizer.parseAttributeName('@')
+			tokenizer.tokenizeAttributeName('@')
 
 			// Assert
 			assert.Equal(t, "@", tokenizer.LatestToken.StartTag.Attributes[0].name)
@@ -731,7 +731,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 				// Act
 				tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
 				tokenizer.State = it.state
-				tokenizer.parseAttributeName(it.r)
+				tokenizer.tokenizeAttributeName(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -740,7 +740,7 @@ func TestHtmlTokenizer_parseAttributeName(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAfterAttributeName(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -753,7 +753,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeName(' '))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeName(' '))
 			assert.Equal(t, AfterAttributeName, tokenizer.State)
 		})
 
@@ -762,7 +762,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeName('/'))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeName('/'))
 			assert.Equal(t, SelfClosingStartTag, tokenizer.State)
 		})
 
@@ -773,7 +773,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			tokenizer.LatestToken = expected
 
 			// Act
-			result := tokenizer.parseAfterAttributeName('>')
+			result := tokenizer.tokenizeAfterAttributeName('>')
 
 			// Assert
 			assert.Equal(t, Data, tokenizer.State)
@@ -785,7 +785,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeName('='))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeName('='))
 			assert.Equal(t, BeforeAttributeValue, tokenizer.State)
 		})
 
@@ -795,7 +795,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act
-			result := tokenizer.parseAfterAttributeName(rune(0))
+			result := tokenizer.tokenizeAfterAttributeName(rune(0))
 
 			// Assert
 			assert.Equal(t, newEOFToken(), result)
@@ -812,7 +812,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeName('a'))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeName('a'))
 			assert.Equal(t, Data, tokenizer.State)
 			assert.True(t, tokenizer.ReConsume)
 			assert.Equal(t, len(tokenizer.LatestToken.StartTag.Attributes), 1)
@@ -844,7 +844,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 				// Act
 				tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
 				tokenizer.State = it.state
-				tokenizer.parseAfterAttributeName(it.r)
+				tokenizer.tokenizeAfterAttributeName(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -853,7 +853,7 @@ func TestHtmlTokenizer_parseAfterAttributeName(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
+func TestHtmlTokenizer_tokenizeBeforeAttributeValue(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -866,7 +866,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeValue(' '))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeValue(' '))
 			assert.Equal(t, BeforeAttributeValue, tokenizer.State)
 		})
 
@@ -875,7 +875,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeValue('"'))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeValue('"'))
 			assert.Equal(t, AttributeValueDoubleQuoted, tokenizer.State)
 		})
 
@@ -884,7 +884,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeValue('\''))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeValue('\''))
 			assert.Equal(t, AttributeValueSingleQuoted, tokenizer.State)
 		})
 
@@ -893,7 +893,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseBeforeAttributeValue('a'))
+			assert.Nil(t, tokenizer.tokenizeBeforeAttributeValue('a'))
 			assert.Equal(t, AttributeValueUnquoted, tokenizer.State)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -924,7 +924,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 				// Act
 				tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
 				tokenizer.State = it.state
-				tokenizer.parseBeforeAttributeValue(it.r)
+				tokenizer.tokenizeBeforeAttributeValue(it.r)
 
 				// Assert
 				assert.Error(t, err)
@@ -933,7 +933,7 @@ func TestHtmlTokenizer_parseBeforeAttributeValue(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAttributeValueDoubleQuoted(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -951,7 +951,7 @@ func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act
-			result := tokenizer.parseAttributeValueDoubleQuoted('"')
+			result := tokenizer.tokenizeAttributeValueDoubleQuoted('"')
 
 			// Assert
 			assert.Nil(t, result)
@@ -964,7 +964,7 @@ func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act
-			result := tokenizer.parseAttributeValueDoubleQuoted(rune(0))
+			result := tokenizer.tokenizeAttributeValueDoubleQuoted(rune(0))
 
 			// Assert
 			assert.Equal(t, newEOFToken(), result)
@@ -975,7 +975,7 @@ func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act
-			result := tokenizer.parseAttributeValueDoubleQuoted('a')
+			result := tokenizer.tokenizeAttributeValueDoubleQuoted('a')
 
 			// Assert
 			assert.Nil(t, result)
@@ -997,7 +997,7 @@ func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseAttributeValueDoubleQuoted('a')
+			tokenizer.tokenizeAttributeValueDoubleQuoted('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1005,7 +1005,7 @@ func TestHtmlTokenizer_parseAttributeValueDoubleQuoted(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAttributeValueSingleQuoted(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1018,7 +1018,7 @@ func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeValueSingleQuoted('\''))
+			assert.Nil(t, tokenizer.tokenizeAttributeValueSingleQuoted('\''))
 			assert.Equal(t, AfterAttributeValueQuoted, tokenizer.State)
 		})
 
@@ -1028,7 +1028,7 @@ func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Equal(t, newEOFToken(), tokenizer.parseAttributeValueSingleQuoted(rune(0)))
+			assert.Equal(t, newEOFToken(), tokenizer.tokenizeAttributeValueSingleQuoted(rune(0)))
 		})
 
 		t.Run("if other input, add attribute value", func(t *testing.T) {
@@ -1041,7 +1041,7 @@ func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeValueSingleQuoted('a'))
+			assert.Nil(t, tokenizer.tokenizeAttributeValueSingleQuoted('a'))
 			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].value)
 		})
 	})
@@ -1060,7 +1060,7 @@ func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseAttributeValueSingleQuoted('a')
+			tokenizer.tokenizeAttributeValueSingleQuoted('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1068,7 +1068,7 @@ func TestHtmlTokenizer_parseAttributeValueSingleQuoted(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAttributeValueUnQuoted(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1081,7 +1081,7 @@ func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeValueUnquoted(' '))
+			assert.Nil(t, tokenizer.tokenizeAttributeValueUnquoted(' '))
 			assert.Equal(t, BeforeAttributeName, tokenizer.State)
 		})
 
@@ -1092,7 +1092,7 @@ func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
 			tokenizer.LatestToken = expected
 
 			// Act & Assert
-			assert.Equal(t, tokenizer.parseAttributeValueUnquoted('>'), expected)
+			assert.Equal(t, tokenizer.tokenizeAttributeValueUnquoted('>'), expected)
 			assert.Equal(t, Data, tokenizer.State)
 		})
 
@@ -1106,7 +1106,7 @@ func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAttributeValueUnquoted('a'))
+			assert.Nil(t, tokenizer.tokenizeAttributeValueUnquoted('a'))
 			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].value)
 		})
 	})
@@ -1125,7 +1125,7 @@ func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseAttributeValueUnquoted('a')
+			tokenizer.tokenizeAttributeValueUnquoted('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1133,7 +1133,7 @@ func TestHtmlTokenizer_parseAttributeValueUnQuoted(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
+func TestHtmlTokenizer_tokenizeAfterAttributeValueQuoted(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1146,7 +1146,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeValueQuoted('/'))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeValueQuoted('/'))
 			assert.Equal(t, SelfClosingStartTag, tokenizer.State)
 		})
 
@@ -1157,7 +1157,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 			tokenizer.LatestToken = expected
 
 			// Act & Assert
-			assert.Equal(t, expected, tokenizer.parseAfterAttributeValueQuoted('>'))
+			assert.Equal(t, expected, tokenizer.tokenizeAfterAttributeValueQuoted('>'))
 			assert.Equal(t, Data, tokenizer.State)
 		})
 
@@ -1167,7 +1167,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Equal(t, newEOFToken(), tokenizer.parseAfterAttributeValueQuoted(rune(0)))
+			assert.Equal(t, newEOFToken(), tokenizer.tokenizeAfterAttributeValueQuoted(rune(0)))
 		})
 
 		t.Run("if other input, set re-consume & change State BeforeAttributeName", func(t *testing.T) {
@@ -1175,7 +1175,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseAfterAttributeValueQuoted('a'))
+			assert.Nil(t, tokenizer.tokenizeAfterAttributeValueQuoted('a'))
 			assert.Equal(t, tokenizer.State, BeforeAttributeName)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -1195,7 +1195,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseAfterAttributeValueQuoted('a')
+			tokenizer.tokenizeAfterAttributeValueQuoted('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1203,7 +1203,7 @@ func TestHtmlTokenizer_parseAfterAttributeValueQuoted(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
+func TestHtmlTokenizer_tokenizeSelfClosingStartTag(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1221,7 +1221,7 @@ func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
 			}
 
 			// Act
-			token := tokenizer.parseSelfClosingStartTag('>')
+			token := tokenizer.tokenizeSelfClosingStartTag('>')
 
 			// Assert
 			assert.Equal(t, Data, tokenizer.State)
@@ -1234,7 +1234,7 @@ func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Equal(t, newEOFToken(), tokenizer.parseSelfClosingStartTag(rune(0)))
+			assert.Equal(t, newEOFToken(), tokenizer.tokenizeSelfClosingStartTag(rune(0)))
 		})
 
 		t.Run("if other input, do nothing", func(t *testing.T) {
@@ -1242,7 +1242,7 @@ func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseSelfClosingStartTag('a'))
+			assert.Nil(t, tokenizer.tokenizeSelfClosingStartTag('a'))
 			assert.Equal(t, SelfClosingStartTag, tokenizer.State)
 		})
 	})
@@ -1261,7 +1261,7 @@ func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseSelfClosingStartTag('a')
+			tokenizer.tokenizeSelfClosingStartTag('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1269,7 +1269,7 @@ func TestHtmlTokenizer_parseSelfClosingStartTag(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseScriptData(t *testing.T) {
+func TestHtmlTokenizer_tokenizeScriptData(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1282,7 +1282,7 @@ func TestHtmlTokenizer_parseScriptData(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseScriptData('<'))
+			assert.Nil(t, tokenizer.tokenizeScriptData('<'))
 			assert.Equal(t, ScriptDataLessThanSign, tokenizer.State)
 		})
 
@@ -1292,7 +1292,7 @@ func TestHtmlTokenizer_parseScriptData(t *testing.T) {
 			tokenizer.Pos = 1
 
 			// Act & Assert
-			assert.Equal(t, newEOFToken(), tokenizer.parseScriptData(rune(0)))
+			assert.Equal(t, newEOFToken(), tokenizer.tokenizeScriptData(rune(0)))
 		})
 
 		t.Run("if other input, return runeToken", func(t *testing.T) {
@@ -1300,7 +1300,7 @@ func TestHtmlTokenizer_parseScriptData(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Equal(t, newRuneToken('a'), tokenizer.parseScriptData('a'))
+			assert.Equal(t, newRuneToken('a'), tokenizer.tokenizeScriptData('a'))
 		})
 	})
 
@@ -1318,7 +1318,7 @@ func TestHtmlTokenizer_parseScriptData(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseScriptData('a')
+			tokenizer.tokenizeScriptData('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1326,7 +1326,7 @@ func TestHtmlTokenizer_parseScriptData(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseScriptDataLessThanSign(t *testing.T) {
+func TestHtmlTokenizer_tokenizeScriptDataLessThanSign(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1340,7 +1340,7 @@ func TestHtmlTokenizer_parseScriptDataLessThanSign(t *testing.T) {
 			tokenizer.Buf = "temp"
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseScriptDataLessThanSign('/'))
+			assert.Nil(t, tokenizer.tokenizeScriptDataLessThanSign('/'))
 			assert.Equal(t, ScriptDataEndTagOpen, tokenizer.State)
 			assert.Equal(t, "", tokenizer.Buf)
 		})
@@ -1350,7 +1350,7 @@ func TestHtmlTokenizer_parseScriptDataLessThanSign(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Equal(t, tokenizer.parseScriptDataLessThanSign('@'), newRuneToken('<'))
+			assert.Equal(t, tokenizer.tokenizeScriptDataLessThanSign('@'), newRuneToken('<'))
 			assert.Equal(t, tokenizer.State, ScriptData)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -1370,7 +1370,7 @@ func TestHtmlTokenizer_parseScriptDataLessThanSign(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseScriptDataLessThanSign('a')
+			tokenizer.tokenizeScriptDataLessThanSign('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1378,7 +1378,7 @@ func TestHtmlTokenizer_parseScriptDataLessThanSign(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseScriptDataEndTagOpen(t *testing.T) {
+func TestHtmlTokenizer_tokenizeScriptDataEndTagOpen(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1391,7 +1391,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseScriptDataEndTagOpen('a'))
+			assert.Nil(t, tokenizer.tokenizeScriptDataEndTagOpen('a'))
 			assert.Equal(t, tokenizer.State, ScriptDataEndTagName)
 			assert.True(t, tokenizer.ReConsume)
 			assert.NotNil(t, tokenizer.LatestToken)
@@ -1402,7 +1402,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagOpen(t *testing.T) {
 			tokenizer := init()
 
 			// Act & Assert
-			assert.Equal(t, tokenizer.parseScriptDataEndTagOpen('@'), newRuneToken('<'))
+			assert.Equal(t, tokenizer.tokenizeScriptDataEndTagOpen('@'), newRuneToken('<'))
 			assert.Equal(t, tokenizer.State, ScriptData)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -1422,7 +1422,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagOpen(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseScriptDataEndTagOpen('a')
+			tokenizer.tokenizeScriptDataEndTagOpen('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1430,7 +1430,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagOpen(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
+func TestHtmlTokenizer_tokenizeScriptDataEndTagName(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1445,7 +1445,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
 			tokenizer.LatestToken = expected
 
 			// Act & Assert
-			assert.Equal(t, expected, tokenizer.parseScriptDataEndTagName('>'))
+			assert.Equal(t, expected, tokenizer.tokenizeScriptDataEndTagName('>'))
 			assert.Equal(t, Data, tokenizer.State)
 		})
 
@@ -1459,7 +1459,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseScriptDataEndTagName('a'))
+			assert.Nil(t, tokenizer.tokenizeScriptDataEndTagName('a'))
 			assert.Equal(t, "a", tokenizer.LatestToken.EndTag.Tag)
 		})
 
@@ -1473,7 +1473,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
 			}
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseScriptDataEndTagName('@'))
+			assert.Nil(t, tokenizer.tokenizeScriptDataEndTagName('@'))
 			assert.Equal(t, TemporaryBuffer, tokenizer.State)
 			assert.Equal(t, "</@", tokenizer.Buf)
 		})
@@ -1493,7 +1493,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseScriptDataEndTagName('a')
+			tokenizer.tokenizeScriptDataEndTagName('a')
 
 			// Assert
 			assert.Error(t, err)
@@ -1501,7 +1501,7 @@ func TestHtmlTokenizer_parseScriptDataEndTagName(t *testing.T) {
 	})
 }
 
-func TestHtmlTokenizer_parseTemporaryBuffer(t *testing.T) {
+func TestHtmlTokenizer_tokenizeTemporaryBuffer(t *testing.T) {
 	t.Run("normal case, set re-consume", func(t *testing.T) {
 		init := func() *HtmlTokenizer {
 			tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
@@ -1515,7 +1515,7 @@ func TestHtmlTokenizer_parseTemporaryBuffer(t *testing.T) {
 			tokenizer.Buf = ""
 
 			// Act & Assert
-			assert.Nil(t, tokenizer.parseTemporaryBuffer('a'))
+			assert.Nil(t, tokenizer.tokenizeTemporaryBuffer('a'))
 			assert.Equal(t, ScriptData, tokenizer.State)
 			assert.True(t, tokenizer.ReConsume)
 		})
@@ -1526,7 +1526,7 @@ func TestHtmlTokenizer_parseTemporaryBuffer(t *testing.T) {
 			tokenizer.Buf = "hello"
 
 			// Act & Assert
-			assert.Equal(t, tokenizer.parseTemporaryBuffer('a'), newRuneToken('a'))
+			assert.Equal(t, tokenizer.tokenizeTemporaryBuffer('a'), newRuneToken('a'))
 			assert.True(t, tokenizer.ReConsume)
 			assert.Equal(t, tokenizer.State, TemporaryBuffer)
 			assert.Equal(t, "ello", tokenizer.Buf)
@@ -1547,7 +1547,7 @@ func TestHtmlTokenizer_parseTemporaryBuffer(t *testing.T) {
 			tokenizer.State = Data
 
 			// Act
-			tokenizer.parseTemporaryBuffer('a')
+			tokenizer.tokenizeTemporaryBuffer('a')
 
 			// Assert
 			assert.Error(t, err)
