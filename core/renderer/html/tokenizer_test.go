@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/poteto0/jagaimo/core/renderer/html/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +49,7 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 						StartTag: &StartTag{
 							Tag:           "body",
 							IsSelfClosing: false,
-							Attributes:    []Attribute{},
+							Attributes:    []types.Attribute{},
 						},
 					},
 					{
@@ -59,29 +60,17 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 				},
 			},
 			{
-				name:  "attributes",
+				name:  "types.Attributes",
 				input: "<p class=\"A\" id='B' foo=bar fizz=buzz></p>",
 				expected: []*HtmlToken{
 					{
 						StartTag: &StartTag{
 							Tag: "p",
-							Attributes: []Attribute{
-								{
-									name:  "class",
-									value: "A",
-								},
-								{
-									name:  "id",
-									value: "B",
-								},
-								{
-									name:  "foo",
-									value: "bar",
-								},
-								{
-									name:  "fizz",
-									value: "buzz",
-								},
+							Attributes: []types.Attribute{
+								*types.NewAttribute("class", "A").(*types.Attribute),
+								*types.NewAttribute("id", "B").(*types.Attribute),
+								*types.NewAttribute("foo", "bar").(*types.Attribute),
+								*types.NewAttribute("fizz", "buzz").(*types.Attribute),
 							},
 							IsSelfClosing: false,
 						},
@@ -100,11 +89,8 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 					{
 						StartTag: &StartTag{
 							Tag: "div",
-							Attributes: []Attribute{
-								{
-									name:  "id",
-									value: "div",
-								},
+							Attributes: []types.Attribute{
+								*types.NewAttribute("id", "div").(*types.Attribute),
 							},
 							IsSelfClosing: false,
 						},
@@ -112,15 +98,9 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 					{
 						StartTag: &StartTag{
 							Tag: "p",
-							Attributes: []Attribute{
-								{
-									name:  "class",
-									value: " A",
-								},
-								{
-									name:  "id",
-									value: "BC",
-								},
+							Attributes: []types.Attribute{
+								*types.NewAttribute("class", " A").(*types.Attribute),
+								*types.NewAttribute("id", "BC").(*types.Attribute),
 							},
 							IsSelfClosing: true,
 						},
@@ -140,7 +120,7 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 						StartTag: &StartTag{
 							Tag:           "img",
 							IsSelfClosing: true,
-							Attributes:    []Attribute{},
+							Attributes:    []types.Attribute{},
 						},
 					},
 				},
@@ -153,7 +133,7 @@ func TestHtmlTokenizer_Iter(t *testing.T) {
 						StartTag: &StartTag{
 							Tag:           "script",
 							IsSelfClosing: false,
-							Attributes:    []Attribute{},
+							Attributes:    []types.Attribute{},
 						},
 					},
 					newRuneToken(' '),
@@ -596,7 +576,7 @@ func TestHtmlTokenizer_tokenizeBeforeAttributeName(t *testing.T) {
 			tokenizer := init()
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{},
+					Attributes: []types.Attribute{},
 				},
 			}
 
@@ -676,15 +656,15 @@ func TestHtmlTokenizer_tokenizeAttributeName(t *testing.T) {
 			tokenizer := init()
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{
-						{name: "", value: ""},
+					Attributes: []types.Attribute{
+						*types.NewAttribute("", "").(*types.Attribute),
 					},
 				},
 			}
 
 			// Act & Assert
 			assert.Nil(t, tokenizer.tokenizeAttributeName('A'))
-			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].name)
+			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].Name())
 		})
 
 		t.Run("if others input, append to the attribute name", func(t *testing.T) {
@@ -692,8 +672,8 @@ func TestHtmlTokenizer_tokenizeAttributeName(t *testing.T) {
 			tokenizer := init()
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{
-						{name: "", value: ""},
+					Attributes: []types.Attribute{
+						*types.NewAttribute("", "").(*types.Attribute),
 					},
 				},
 			}
@@ -702,7 +682,7 @@ func TestHtmlTokenizer_tokenizeAttributeName(t *testing.T) {
 			tokenizer.tokenizeAttributeName('@')
 
 			// Assert
-			assert.Equal(t, "@", tokenizer.LatestToken.StartTag.Attributes[0].name)
+			assert.Equal(t, "@", tokenizer.LatestToken.StartTag.Attributes[0].Name())
 		})
 	})
 
@@ -807,7 +787,7 @@ func TestHtmlTokenizer_tokenizeAfterAttributeName(t *testing.T) {
 			tokenizer.Input = []rune("a")
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{},
+					Attributes: []types.Attribute{},
 				},
 			}
 
@@ -940,7 +920,7 @@ func TestHtmlTokenizer_tokenizeAttributeValueDoubleQuoted(t *testing.T) {
 			tokenizer.State = AttributeValueDoubleQuoted
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{{}},
+					Attributes: []types.Attribute{{}},
 				},
 			}
 			return tokenizer
@@ -979,7 +959,7 @@ func TestHtmlTokenizer_tokenizeAttributeValueDoubleQuoted(t *testing.T) {
 
 			// Assert
 			assert.Nil(t, result)
-			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].value)
+			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].Value())
 		})
 	})
 
@@ -1036,13 +1016,15 @@ func TestHtmlTokenizer_tokenizeAttributeValueSingleQuoted(t *testing.T) {
 			tokenizer := init()
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{{name: "", value: ""}},
+					Attributes: []types.Attribute{
+						*types.NewAttribute("", "").(*types.Attribute),
+					},
 				},
 			}
 
 			// Act & Assert
 			assert.Nil(t, tokenizer.tokenizeAttributeValueSingleQuoted('a'))
-			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].value)
+			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].Value())
 		})
 	})
 
@@ -1101,13 +1083,15 @@ func TestHtmlTokenizer_tokenizeAttributeValueUnQuoted(t *testing.T) {
 			tokenizer := init()
 			tokenizer.LatestToken = &HtmlToken{
 				StartTag: &StartTag{
-					Attributes: []Attribute{{name: "", value: ""}},
+					Attributes: []types.Attribute{
+						*types.NewAttribute("", "").(*types.Attribute),
+					},
 				},
 			}
 
 			// Act & Assert
 			assert.Nil(t, tokenizer.tokenizeAttributeValueUnquoted('a'))
-			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].value)
+			assert.Equal(t, "a", tokenizer.LatestToken.StartTag.Attributes[0].Value())
 		})
 	})
 
@@ -1607,7 +1591,7 @@ func TestHtmlTokenizer_createTag(t *testing.T) {
 			expectedStartTag: &StartTag{
 				Tag:           "",
 				IsSelfClosing: false,
-				Attributes:    []Attribute{},
+				Attributes:    []types.Attribute{},
 			},
 			expectedEndTag: nil,
 		},
@@ -1654,7 +1638,7 @@ func TestHtmlTokenizer_appendTagName(t *testing.T) {
 					StartTag: &StartTag{
 						Tag:           "",
 						IsSelfClosing: false,
-						Attributes:    []Attribute{},
+						Attributes:    []types.Attribute{},
 					},
 				},
 				expected: "a",
@@ -1806,14 +1790,14 @@ func TestHtmlTokenizer_startNewAttribute(t *testing.T) {
 		tests := []struct {
 			name        string
 			latestToken *HtmlToken
-			expected    []Attribute
+			expected    []types.Attribute
 		}{
 			{
 				name: "append to start tag",
 				latestToken: &HtmlToken{
 					StartTag: &StartTag{},
 				},
-				expected: []Attribute{
+				expected: []types.Attribute{
 					{},
 				},
 			},
@@ -1883,7 +1867,7 @@ func TestHtmlTokenizer_appendAttribute(t *testing.T) {
 			r           rune
 			isName      bool
 			latestToken *HtmlToken
-			expected    []Attribute
+			expected    []types.Attribute
 		}{
 			{
 				name:   "append to start tag",
@@ -1891,16 +1875,13 @@ func TestHtmlTokenizer_appendAttribute(t *testing.T) {
 				isName: true,
 				latestToken: &HtmlToken{
 					StartTag: &StartTag{
-						Attributes: []Attribute{
+						Attributes: []types.Attribute{
 							{},
 						},
 					},
 				},
-				expected: []Attribute{
-					{
-						name:  "a",
-						value: "",
-					},
+				expected: []types.Attribute{
+					*types.NewAttribute("a", "").(*types.Attribute),
 				},
 			},
 		}
@@ -1935,7 +1916,7 @@ func TestHtmlTokenizer_appendAttribute(t *testing.T) {
 				name: "StartTag w/ 0 length attribute list",
 				latestToken: &HtmlToken{
 					StartTag: &StartTag{
-						Attributes: []Attribute{},
+						Attributes: []types.Attribute{},
 					},
 				},
 			},

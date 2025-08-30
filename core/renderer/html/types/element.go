@@ -1,4 +1,4 @@
-package html
+package types
 
 type ElementKind string
 

@@ -1,9 +1,11 @@
 package html
 
+import "github.com/poteto0/jagaimo/core/renderer/html/types"
+
 type StartTag struct {
 	Tag           string
 	IsSelfClosing bool
-	Attributes    []Attribute
+	Attributes    []types.Attribute
 }
 
 type EndTag struct {

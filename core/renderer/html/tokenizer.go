@@ -2,6 +2,8 @@ package html
 
 import (
 	"unicode"
+
+	"github.com/poteto0/jagaimo/core/renderer/html/types"
 )
 
 type IHtmlTokenizer interface {
@@ -611,7 +613,7 @@ func (tokenizer *HtmlTokenizer) createTag(isStartTagToken bool) {
 			StartTag: &StartTag{
 				Tag:           "",
 				IsSelfClosing: false,
-				Attributes:    []Attribute{},
+				Attributes:    []types.Attribute{},
 			},
 		}
 		return
@@ -661,7 +663,7 @@ func (tokenizer *HtmlTokenizer) startNewAttribute() {
 
 	token := tokenizer.LatestToken
 	if token.IsStartTag() {
-		token.StartTag.Attributes = append(token.StartTag.Attributes, Attribute{})
+		token.StartTag.Attributes = append(token.StartTag.Attributes, types.Attribute{})
 		return
 	}
 

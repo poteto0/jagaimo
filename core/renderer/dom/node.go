@@ -3,12 +3,12 @@ package dom
 import (
 	"weak"
 
-	"github.com/poteto0/jagaimo/core/renderer/html"
+	htmlTypes "github.com/poteto0/jagaimo/core/renderer/html/types"
 )
 
 type NodeKind struct {
 	Document int
-	Element  *html.Element
+	Element  *htmlTypes.Element
 	Text     string
 }
 
@@ -28,8 +28,8 @@ type INode interface {
 	SetWindow(window weak.Pointer[Window])
 	Kind() NodeKind
 
-	GetElement() *html.Element
-	ElementKind() html.ElementKind
+	GetElement() *htmlTypes.Element
+	ElementKind() htmlTypes.ElementKind
 }
 
 type Node struct {
@@ -63,7 +63,7 @@ func (node *Node) Kind() NodeKind {
 	return node.kind
 }
 
-func (node *Node) GetElement() *html.Element {
+func (node *Node) GetElement() *htmlTypes.Element {
 	if node.kind.IsElement() {
 		return node.kind.Element
 	}
@@ -71,10 +71,10 @@ func (node *Node) GetElement() *html.Element {
 	return nil
 }
 
-func (node *Node) ElementKind() html.ElementKind {
+func (node *Node) ElementKind() htmlTypes.ElementKind {
 	if node.kind.IsElement() {
 		return node.kind.Element.Kind()
 	}
 
-	return html.NilElement
+	return htmlTypes.NilElement
 }

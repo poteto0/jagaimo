@@ -1,15 +1,14 @@
-package html_test
+package types
 
 import (
 	"testing"
 
-	"github.com/poteto0/jagaimo/core/renderer/html"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewAttribute(t *testing.T) {
 	// Act
-	attr := html.NewAttribute("name", "value")
+	attr := NewAttribute("name", "value")
 
 	// Assert
 	assert.Equal(t, "name", attr.Name())
@@ -43,7 +42,7 @@ func TestAttribute_AddRune(t *testing.T) {
 	for _, it := range tests {
 		t.Run(it.name, func(t *testing.T) {
 			// Arrange
-			attr := html.NewAttribute("name", "value")
+			attr := NewAttribute("name", "value")
 
 			// Act
 			attr.AddRune(it.input, it.isName)

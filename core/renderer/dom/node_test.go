@@ -4,7 +4,7 @@ import (
 	"testing"
 	"weak"
 
-	"github.com/poteto0/jagaimo/core/renderer/html"
+	htmlTypes "github.com/poteto0/jagaimo/core/renderer/html/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +21,7 @@ func TestNodeKind_IsDocument(t *testing.T) {
 func TestNodeKind_IsElement(t *testing.T) {
 	// Arrange
 	kind := NodeKind{
-		Element: &html.Element{},
+		Element: &htmlTypes.Element{},
 	}
 
 	// Act & Assert
@@ -70,7 +70,7 @@ func TestNode_GetElement(t *testing.T) {
 	t.Run("if nodeKind is element, return element", func(t *testing.T) {
 		// Arrange
 		kind := NodeKind{
-			Element: &html.Element{},
+			Element: &htmlTypes.Element{},
 		}
 		node := NewNode(kind).(*Node)
 
@@ -92,7 +92,7 @@ func TestNode_ElementKind(t *testing.T) {
 	t.Run("if nodeKind is element, return element kind", func(t *testing.T) {
 		// Arrange
 		kind := NodeKind{
-			Element: html.NewElement("html", []html.Attribute{}).(*html.Element),
+			Element: htmlTypes.NewElement("html", []htmlTypes.Attribute{}).(*htmlTypes.Element),
 		}
 		node := NewNode(kind).(*Node)
 
@@ -106,6 +106,6 @@ func TestNode_ElementKind(t *testing.T) {
 		node := NewNode(kind).(*Node)
 
 		// Act & Assert
-		assert.Equal(t, html.NilElement, node.ElementKind())
+		assert.Equal(t, htmlTypes.NilElement, node.ElementKind())
 	})
 }
