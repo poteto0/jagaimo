@@ -89,7 +89,15 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			}
 
 		case BeforeHtml:
-			return nil
+			next, isFinished := parser.parseBeforeHtml(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 		case BeforeHead:
 			return nil
 		case InHead:
@@ -155,9 +163,11 @@ func (parser *HtmlParser) parseBeforeHtml(token *HtmlToken) (next *HtmlToken, Is
 	return nil, false
 }
 
+// insert element node into node's last child
+//   - link parent to child
 func (parser *HtmlParser) insertElement(tag string, attributes []types.Attribute) {
 	currentNode := parser.currentNode()
-	node := parser.createElementNode(tag, attributes)
+	node := createElementNode(tag, attributes)
 
 	defer func() {
 		currentNode.LastChild = weak.Make(node)
@@ -172,10 +182,6 @@ func (parser *HtmlParser) insertElement(tag string, attributes []types.Attribute
 
 	lastSibling := currentNode.FirstChild
 	for {
-		if lastSibling == nil {
-			panic("lastSibling shouldn't be nil")
-		}
-
 		if lastSibling.NextSibling == nil {
 			break
 		}
@@ -199,7 +205,7 @@ func (parser *HtmlParser) currentNode() *dom.Node {
 	return parser.window.Document()
 }
 
-func (parser *HtmlParser) createElementNode(tag string, attributes []types.Attribute) *dom.Node {
+func createElementNode(tag string, attributes []types.Attribute) *dom.Node {
 	return dom.NewNode(
 		dom.NodeKind{
 			Element: types.NewElement(
