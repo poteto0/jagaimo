@@ -1,6 +1,8 @@
 package html
 
 import (
+	"weak"
+
 	"github.com/poteto0/jagaimo/core/renderer/dom"
 	"github.com/poteto0/jagaimo/core/renderer/html/types"
 )
@@ -34,7 +36,7 @@ type HtmlParser struct {
 	originalInsertionMode InsertionMode
 
 	// refs: https://html.spec.whatwg.org/multipage/parsing.html#the-stack-of-open-elements
-	stackOfOpenElements []*types.Element
+	stackOfOpenElements []*dom.Node
 
 	t IHtmlTokenizer
 }
@@ -44,7 +46,7 @@ func NewHtmlParser(tokenizer IHtmlTokenizer) IHtmlParser {
 		window:                dom.NewWindow(),
 		mode:                  Initial,
 		originalInsertionMode: Initial,
-		stackOfOpenElements:   []*types.Element{},
+		stackOfOpenElements:   []*dom.Node{},
 		t:                     tokenizer,
 	}
 }
@@ -82,7 +84,7 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 		switch parser.mode {
 		// not support DOCTYPE
 		case Initial:
-			if next := parser.parseInitial(token); next != nil {
+			if next, _ := parser.parseInitial(token); next != nil {
 				token = next
 			}
 
@@ -108,16 +110,101 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 }
 
 // not support DOCTYPE
-func (parser *HtmlParser) parseInitial(token *HtmlToken) *HtmlToken {
+func (parser *HtmlParser) parseInitial(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
 	if parser.mode != Initial {
 		panic("unexpected insertion mode")
 	}
 
 	// ignore rune token
 	if token.IsRune() {
-		return parser.t.Next()
+		return parser.t.Next(), false
 	}
 
 	parser.mode = BeforeHtml
-	return nil
+	return nil, false
+}
+
+// take <html>
+func (parser *HtmlParser) parseBeforeHtml(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != BeforeHtml {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		if r == ' ' || r == '\n' {
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsStartTag() {
+		tag, _, attributes := token.StartTag.Take()
+		if tag == "html" {
+			parser.insertElement(tag, attributes)
+			parser.mode = BeforeHead
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	// auto insert html token
+	parser.insertElement("html", []types.Attribute{})
+	parser.mode = BeforeHead
+	return nil, false
+}
+
+func (parser *HtmlParser) insertElement(tag string, attributes []types.Attribute) {
+	currentNode := parser.currentNode()
+	node := parser.createElementNode(tag, attributes)
+
+	defer func() {
+		currentNode.LastChild = weak.Make(node)
+		node.Parent = weak.Make(currentNode)
+		parser.stackOfOpenElements = append(parser.stackOfOpenElements, node)
+	}()
+
+	if currentNode.FirstChild == nil {
+		currentNode.FirstChild = node
+		return
+	}
+
+	lastSibling := currentNode.FirstChild
+	for {
+		if lastSibling == nil {
+			panic("lastSibling shouldn't be nil")
+		}
+
+		if lastSibling.NextSibling == nil {
+			break
+		}
+
+		lastSibling = lastSibling.NextSibling
+	}
+
+	lastSibling.NextSibling = node
+	node.PrevSibling = weak.Make(lastSibling)
+}
+
+func (parser *HtmlParser) currentNode() *dom.Node {
+	if len(parser.stackOfOpenElements) == 0 {
+		return parser.window.Document()
+	}
+
+	if n := parser.stackOfOpenElements[len(parser.stackOfOpenElements)-1]; n != nil {
+		return n
+	}
+
+	return parser.window.Document()
+}
+
+func (parser *HtmlParser) createElementNode(tag string, attributes []types.Attribute) *dom.Node {
+	return dom.NewNode(
+		dom.NodeKind{
+			Element: types.NewElement(
+				tag, attributes,
+			).(*types.Element),
+		},
+	).(*dom.Node)
 }

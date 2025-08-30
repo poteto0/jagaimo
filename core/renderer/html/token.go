@@ -8,6 +8,10 @@ type StartTag struct {
 	Attributes    []types.Attribute
 }
 
+func (st *StartTag) Take() (tag string, isSelfClosing bool, attributes []types.Attribute) {
+	return st.Tag, st.IsSelfClosing, st.Attributes
+}
+
 type EndTag struct {
 	Tag string
 }

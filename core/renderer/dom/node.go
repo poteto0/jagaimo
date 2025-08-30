@@ -39,8 +39,8 @@ type Node struct {
 	Parent      weak.Pointer[Node]
 	FirstChild  *Node
 	LastChild   weak.Pointer[Node]
-	NextSibling weak.Pointer[Node]
-	PrevSibling *Node
+	NextSibling *Node
+	PrevSibling weak.Pointer[Node]
 }
 
 func NewNode(kind NodeKind) INode {
@@ -50,8 +50,8 @@ func NewNode(kind NodeKind) INode {
 		Parent:      weak.Pointer[Node]{},
 		FirstChild:  nil,
 		LastChild:   weak.Pointer[Node]{},
-		NextSibling: weak.Pointer[Node]{},
-		PrevSibling: nil,
+		NextSibling: nil,
+		PrevSibling: weak.Pointer[Node]{},
 	}
 }
 
