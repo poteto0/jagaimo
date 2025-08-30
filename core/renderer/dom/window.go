@@ -7,6 +7,7 @@ type IWindow interface {
 }
 
 type Window struct {
+	// root node
 	document *Node
 }
 
