@@ -99,7 +99,15 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			}
 
 		case BeforeHead:
-			return nil
+			next, isFinished := parser.parseBeforeHead(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 		case InHead:
 			return nil
 		case AfterHead:
@@ -160,6 +168,36 @@ func (parser *HtmlParser) parseBeforeHtml(token *HtmlToken) (next *HtmlToken, Is
 	// auto insert html token
 	parser.insertElement("html", []types.Attribute{})
 	parser.mode = BeforeHead
+	return nil, false
+}
+
+func (parser *HtmlParser) parseBeforeHead(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != BeforeHead {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		if r == ' ' || r == '\n' {
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsStartTag() {
+		tag, _, attributes := token.StartTag.Take()
+		if tag == "head" {
+			parser.insertElement(tag, attributes)
+			parser.mode = InHead
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	// auto insert html token
+	parser.insertElement("head", []types.Attribute{})
+	parser.mode = InHead
 	return nil, false
 }
 

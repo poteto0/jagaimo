@@ -143,7 +143,7 @@ func TestHtmlParser_parseBeforeHtml(t *testing.T) {
 	})
 
 	t.Run("panic case", func(t *testing.T) {
-		t.Run("the mode is not Initial", func(t *testing.T) {
+		t.Run("the mode is not BeforeHtml", func(t *testing.T) {
 			var err error
 			defer func() {
 				if r := recover(); r != nil {
@@ -157,6 +157,99 @@ func TestHtmlParser_parseBeforeHtml(t *testing.T) {
 
 			// Act
 			parser.parseBeforeHtml(nil)
+
+			// Assert
+			assert.Error(t, err)
+			assert.Equal(t, Initial, parser.mode)
+		})
+	})
+}
+
+func TestHtmlParser_parseBeforeHead(t *testing.T) {
+	t.Run("normal case", func(t *testing.T) {
+		init := func() *HtmlParser {
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				" <head></head><body></body>",
+			)).(*HtmlParser)
+			parser.mode = BeforeHead
+			return parser
+		}
+
+		t.Run("if rune token of ' ' or \n , return next token", func(t *testing.T) {
+			// Arrange
+			parser := init()
+			token := parser.t.Next()
+
+			// Act
+			next, _ := parser.parseBeforeHead(token)
+			assert.Equal(t, &HtmlToken{
+				StartTag: &StartTag{
+					Tag:           "head",
+					IsSelfClosing: false,
+					Attributes:    []types.Attribute{},
+				},
+			}, next)
+		})
+
+		t.Run("if startTag & tag is head, insert head node & set InHead mode, return next", func(t *testing.T) {
+			// Arrange
+			parser := init()
+			parser.t = NewHtmlTokenizer(
+				"<head></head><body></body>",
+			)
+
+			// Act
+			next, _ := parser.parseBeforeHead(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "head",
+				},
+			}, next)
+			assert.Equal(t, InHead, parser.mode)
+		})
+
+		t.Run("if EOFToken, return nil & finish parsing", func(t *testing.T) {
+			// Arrange
+			parser := init()
+
+			// Act
+			next, isFinished := parser.parseBeforeHead(newEOFToken())
+
+			// Assert
+			assert.Nil(t, next)
+			assert.True(t, isFinished)
+		})
+
+		t.Run("if other token, insert head node & change mode InHead & return nil", func(t *testing.T) {
+			// Arrange
+			parser := init()
+
+			// Act
+			next, _ := parser.parseBeforeHead(newRuneToken('/'))
+
+			// Assert
+			assert.Nil(t, next)
+			assert.Equal(t, InHead, parser.mode)
+		})
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		t.Run("the mode is not BeforeHead", func(t *testing.T) {
+			var err error
+			defer func() {
+				if r := recover(); r != nil {
+					err = errors.New("panic")
+				}
+			}()
+
+			// Arrange
+			parser := NewHtmlParser(nil).(*HtmlParser)
+			parser.mode = Initial
+
+			// Act
+			parser.parseBeforeHead(nil)
 
 			// Assert
 			assert.Error(t, err)
