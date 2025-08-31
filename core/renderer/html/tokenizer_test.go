@@ -2025,23 +2025,3 @@ func TestHtmlTokenizer_setSelfClosingFlag(t *testing.T) {
 		}
 	})
 }
-
-func Test_isAsciiAlphabetic(t *testing.T) {
-	// Act
-	result := isAsciiAlphabetic('a')
-
-	// Assert
-	assert.True(t, result)
-
-	// Act
-	result = isAsciiAlphabetic('A')
-
-	// Assert
-	assert.True(t, result)
-
-	// Act
-	result = isAsciiAlphabetic('<')
-
-	// Assert
-	assert.False(t, result)
-}

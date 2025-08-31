@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_convertElementKind(t *testing.T) {
+func TestConvertToElementKind(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		tests := []struct {
 			elementName string
@@ -37,22 +37,18 @@ func Test_convertElementKind(t *testing.T) {
 
 		for _, it := range tests {
 			t.Run(fmt.Sprintf("can convert from %s", it.elementName), func(t *testing.T) {
-				// Act & Assert
-				assert.Equal(t, it.expected, convertElementKind(it.elementName))
+				// Act
+				ele, _ := ConvertToElementKind(it.elementName)
+
+				// Assert
+				assert.Equal(t, it.expected, ele)
 			})
 		}
 	})
 
-	t.Run("panic case", func(t *testing.T) {
-		var err error
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("panic")
-			}
-		}()
-
+	t.Run("error case", func(t *testing.T) {
 		// Act
-		convertElementKind("invalid")
+		_, err := ConvertToElementKind("invalid")
 
 		// Assert
 		assert.Error(t, err)

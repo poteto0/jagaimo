@@ -702,7 +702,3 @@ func (tokenizer *HtmlTokenizer) setSelfClosingFlag() {
 
 	panic("unexpected latest token, only expect StartTag")
 }
-
-func isAsciiAlphabetic(r rune) bool {
-	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
-}

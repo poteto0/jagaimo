@@ -1,5 +1,7 @@
 package types
 
+import "errors"
+
 type ElementKind string
 
 const (
@@ -21,20 +23,20 @@ const (
 	Body = ElementKind("body")
 )
 
-func convertElementKind(elementName string) ElementKind {
+func ConvertToElementKind(elementName string) (ElementKind, error) {
 	switch elementName {
 	case "html":
-		return Html
+		return Html, nil
 	case "head":
-		return Head
+		return Head, nil
 	case "style":
-		return Style
+		return Style, nil
 	case "script":
-		return Script
+		return Script, nil
 	case "body":
-		return Body
+		return Body, nil
 	default:
-		panic("unexpected element name")
+		return NilElement, errors.New("unexpected element name")
 	}
 }
 
@@ -48,8 +50,13 @@ type Element struct {
 }
 
 func NewElement(elementName string, attributes []Attribute) IElement {
+	ele, err := ConvertToElementKind(elementName)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Element{
-		kind:       convertElementKind(elementName),
+		kind:       ele,
 		attributes: append(attributes, Attribute{}),
 	}
 }

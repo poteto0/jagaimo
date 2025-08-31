@@ -31,7 +31,8 @@ func TestNodeKind_IsElement(t *testing.T) {
 func TestNodeKind_IsText(t *testing.T) {
 	// Arrange
 	kind := NodeKind{
-		Text: "text",
+		Text:    "text",
+		HasText: true,
 	}
 
 	// Act & Assert
@@ -53,17 +54,6 @@ func TestNode_SetWindow(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, window, node.window)
-}
-
-func TestNode_Kind(t *testing.T) {
-	// Arrange
-	kind := NodeKind{
-		Document: 1,
-	}
-	node := NewNode(kind).(*Node)
-
-	// Act & Assert
-	assert.Equal(t, kind, node.Kind())
 }
 
 func TestNode_GetElement(t *testing.T) {

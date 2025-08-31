@@ -10,6 +10,7 @@ type NodeKind struct {
 	Document int
 	Element  *htmlTypes.Element
 	Text     string
+	HasText  bool
 }
 
 func (nk *NodeKind) IsDocument() bool {
@@ -21,19 +22,18 @@ func (nk *NodeKind) IsElement() bool {
 }
 
 func (nk *NodeKind) IsText() bool {
-	return nk.Text != ""
+	return nk.HasText
 }
 
 type INode interface {
 	SetWindow(window weak.Pointer[Window])
-	Kind() NodeKind
 
 	GetElement() *htmlTypes.Element
 	ElementKind() htmlTypes.ElementKind
 }
 
 type Node struct {
-	kind NodeKind
+	Kind NodeKind
 	// escape loop reference
 	window      weak.Pointer[Window]
 	Parent      weak.Pointer[Node]
@@ -45,7 +45,7 @@ type Node struct {
 
 func NewNode(kind NodeKind) INode {
 	return &Node{
-		kind:        kind,
+		Kind:        kind,
 		window:      weak.Pointer[Window]{},
 		Parent:      weak.Pointer[Node]{},
 		FirstChild:  nil,
@@ -59,21 +59,17 @@ func (node *Node) SetWindow(window weak.Pointer[Window]) {
 	node.window = window
 }
 
-func (node *Node) Kind() NodeKind {
-	return node.kind
-}
-
 func (node *Node) GetElement() *htmlTypes.Element {
-	if node.kind.IsElement() {
-		return node.kind.Element
+	if node.Kind.IsElement() {
+		return node.Kind.Element
 	}
 
 	return nil
 }
 
 func (node *Node) ElementKind() htmlTypes.ElementKind {
-	if node.kind.IsElement() {
-		return node.kind.Element.Kind()
+	if node.Kind.IsElement() {
+		return node.Kind.Element.Kind()
 	}
 
 	return htmlTypes.NilElement

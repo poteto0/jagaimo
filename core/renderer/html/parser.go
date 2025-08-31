@@ -1,6 +1,7 @@
 package html
 
 import (
+	"fmt"
 	"weak"
 
 	"github.com/poteto0/jagaimo/core/renderer/dom"
@@ -15,6 +16,7 @@ const (
 	BeforeHtml
 	BeforeHead
 	InHead
+	Text
 	AfterHead
 	InBody
 	TextAfterBody
@@ -109,6 +111,15 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			}
 
 		case InHead:
+			next, isFinished := parser.parseInHead(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 			return nil
 		case AfterHead:
 			return nil
@@ -195,10 +206,67 @@ func (parser *HtmlParser) parseBeforeHead(token *HtmlToken) (next *HtmlToken, Is
 		return nil, true
 	}
 
-	// auto insert html token
+	// auto insert head token
 	parser.insertElement("head", []types.Attribute{})
 	parser.mode = InHead
 	return nil, false
+}
+
+func (parser *HtmlParser) parseInHead(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != InHead {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		if r == ' ' || r == '\n' {
+			// if currentNode is not Text, do nothing
+			parser.insertRune(r)
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsStartTag() {
+		tag, _, attributes := token.StartTag.Take()
+		if tag == "style" || tag == "script" {
+			parser.insertElement(tag, attributes)
+			parser.originalInsertionMode = parser.mode
+			parser.mode = Text
+			return parser.t.Next(), false
+		}
+
+		// deal w hanging infinite loop by omission of <head>
+		// <head> is omitted, cannot move AfterHead from Input
+		if tag == "body" {
+			parser.popUntil(types.Head)
+			parser.mode = AfterHead
+			return nil, false
+		}
+
+		// !skip not supported element kind
+		// !user can use on html, but doesn't work.
+		// EX) <meta> <title>
+		parser.popUntil(types.Head)
+		parser.mode = AfterHead
+		return nil, false
+	}
+
+	if token.IsEndTag() {
+		tag := token.EndTag.Tag
+		if tag == "head" {
+			parser.mode = AfterHead
+			parser.popUntil(types.Head)
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	// !skip not supported element kind
+	// !user can use on html, but doesn't work.
+	// EX) <meta> <title>
+	return parser.t.Next(), false
 }
 
 // insert element node into node's last child
@@ -243,12 +311,68 @@ func (parser *HtmlParser) currentNode() *dom.Node {
 	return parser.window.Document()
 }
 
-func createElementNode(tag string, attributes []types.Attribute) *dom.Node {
-	return dom.NewNode(
-		dom.NodeKind{
-			Element: types.NewElement(
-				tag, attributes,
-			).(*types.Element),
-		},
-	).(*dom.Node)
+func (parser *HtmlParser) insertRune(r rune) {
+	currentNode := parser.currentNode()
+
+	if currentNode.Kind.IsText() {
+		currentNode.Kind.Text += string(r)
+		return
+	}
+
+	if r == '\n' || r == ' ' {
+		return
+	}
+
+	node := createRune(r)
+
+	defer func() {
+		currentNode.LastChild = weak.Make(node)
+		node.Parent = weak.Make(currentNode)
+		parser.stackOfOpenElements = append(parser.stackOfOpenElements, node)
+	}()
+
+	if currentNode.FirstChild == nil {
+		currentNode.FirstChild = node
+		return
+	}
+
+	currentNode.FirstChild.NextSibling = node
+}
+
+// pop stacked open all elements until target element kind
+func (parser *HtmlParser) popUntil(kind types.ElementKind) {
+	if !parser.hasKindInStack(kind) {
+		panic(fmt.Sprintf("unexpected stack doesn't have %s", kind))
+	}
+
+	for {
+		node := parser.popCurrentNode()
+		if node.ElementKind() == kind {
+			return
+		}
+	}
+}
+
+func (parser *HtmlParser) hasKindInStack(kind types.ElementKind) bool {
+	if len(parser.stackOfOpenElements) == 0 {
+		return false
+	}
+
+	for _, n := range parser.stackOfOpenElements {
+		if n.ElementKind() == kind {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (parser *HtmlParser) popCurrentNode() *dom.Node {
+	if len(parser.stackOfOpenElements) == 0 {
+		panic("unexpected empty stack")
+	}
+
+	node := parser.currentNode()
+	parser.stackOfOpenElements = parser.stackOfOpenElements[:len(parser.stackOfOpenElements)-1]
+	return node
 }
