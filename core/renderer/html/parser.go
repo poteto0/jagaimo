@@ -60,19 +60,19 @@ BeforeHtml    : Document
   │               └ HtmlElement
 BeforeHead    : Document
   │               └ HtmlElement
-	│                    └ HeadElement
+  │                    └ HeadElement
 InHead
   │
 AfterHead     : Document
   │               └ HtmlElement
-	│                    ├ HeadElement
-	│                    └ BodyElement
+  │                    ├ HeadElement
+  │                    └ BodyElement
 InBody───┐: Document
   │└───┘     └ HtmlElement
-	│                    ├ HeadElement
-	│                    └ BodyElement
-	│                          └ H1Element
-	│                                └ "hello"
+  │                    ├ HeadElement
+  │                    └ BodyElement
+  │                          └ H1Element
+  │                                └ "hello"
 AfterBody
   │
 AfterAfterBody
