@@ -20,7 +20,7 @@ const (
 	AfterHead
 	InBody
 	TextAfterBody
-	AfterAfterBody
+	AfterBody
 )
 
 type IHtmlParser interface {
@@ -120,14 +120,21 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 				token = next
 			}
 
-			return nil
 		case AfterHead:
-			return nil
+			next, isFinished := parser.parseAfterHead(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 		case InBody:
 			return nil
 		case TextAfterBody:
 			return nil
-		case AfterAfterBody:
+		case AfterBody:
 			return nil
 		default:
 			panic("unexpected mode")
@@ -269,6 +276,83 @@ func (parser *HtmlParser) parseInHead(token *HtmlToken) (next *HtmlToken, IsFini
 	return parser.t.Next(), false
 }
 
+func (parser *HtmlParser) parseAfterHead(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != AfterHead {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		if r == ' ' || r == '\n' {
+			parser.insertRune(r)
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsStartTag() {
+		tag, _, attributes := token.StartTag.Take()
+		if tag == "body" {
+			parser.insertElement(tag, attributes)
+			parser.mode = InBody
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	// if not has body, auto append body to DOM
+	parser.insertElement("body", []types.Attribute{})
+	parser.mode = InBody
+	return nil, false
+}
+
+func (parser *HtmlParser) parseInBody(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != InBody {
+		panic("unexpected insertion mode")
+	}
+
+	if token.IsEndTag() {
+		switch token.EndTag.Tag {
+		case "body":
+			parser.mode = AfterBody
+			token := parser.t.Next()
+			// if failed parse, skip token
+			if !parser.hasKindInStack(types.Body) {
+				return token, false
+			}
+			parser.popUntil(types.Body)
+			return token, false
+
+		// if skipped body
+		case "html":
+			// auto inserted body
+			if parser.tryPopCurrentNode(types.Body) {
+				parser.mode = AfterBody
+
+				if !parser.tryPopCurrentNode(types.Html) {
+					panic("unexpected html element")
+				}
+
+				return nil, false
+			}
+			return parser.t.Next(), false
+
+		// TODO: other end tags
+		default:
+			return parser.t.Next(), false
+		}
+	}
+
+	// TODO: star tag
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	return parser.t.Next(), false
+}
+
 // insert element node into node's last child
 //   - link parent to child
 func (parser *HtmlParser) insertElement(tag string, attributes []types.Attribute) {
@@ -375,4 +459,20 @@ func (parser *HtmlParser) popCurrentNode() *dom.Node {
 	node := parser.currentNode()
 	parser.stackOfOpenElements = parser.stackOfOpenElements[:len(parser.stackOfOpenElements)-1]
 	return node
+}
+
+// try to pop by element Kind.
+// if currentNode is target element, pop & return true
+func (parser *HtmlParser) tryPopCurrentNode(kind types.ElementKind) bool {
+	if len(parser.stackOfOpenElements) == 0 {
+		return false
+	}
+
+	node := parser.currentNode()
+	if node.ElementKind() == kind {
+		parser.popCurrentNode()
+		return true
+	}
+
+	return false
 }
