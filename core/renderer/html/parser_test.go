@@ -729,6 +729,21 @@ func TestHtmlParser_parseInBody(t *testing.T) {
 			})
 			assert.False(t, isFinished)
 		})
+
+		t.Run("if rune token, return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"ab",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			res, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, newRuneToken('b'), res)
+			assert.False(t, isFinished)
+		})
 	})
 
 	t.Run("panic case", func(t *testing.T) {
@@ -773,6 +788,158 @@ func TestHtmlParser_parseInBody(t *testing.T) {
 
 			// Act
 			parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Error(t, err)
+		})
+	})
+}
+
+func TestHtmlParser_parseText(t *testing.T) {
+	t.Run("normal case", func(t *testing.T) {
+		t.Run("if EOF, return nil & finish parsing", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"a",
+			)).(*HtmlParser)
+			parser.mode = Text
+
+			// Act
+			next, isFinished := parser.parseText(newEOFToken())
+
+			// Assert
+			assert.Nil(t, next)
+			assert.True(t, isFinished)
+		})
+
+		t.Run("if end tag, return next & set originalInsertionMode", func(t *testing.T) {
+			node1 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("body", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node2 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("style", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node3 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("script", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+
+			t.Run("if style end tag, pop until to style", func(t *testing.T) {
+				// Arrange
+				parser := NewHtmlParser(NewHtmlTokenizer(
+					"</style></body>",
+				)).(*HtmlParser)
+				parser.mode = Text
+				parser.originalInsertionMode = InBody
+				parser.stackOfOpenElements = []*dom.Node{
+					node1,
+					node2,
+					node3,
+				}
+
+				// Act
+				next, isFinished := parser.parseText(parser.t.Next())
+
+				// Assert
+				assert.Equal(t, &HtmlToken{
+					EndTag: &EndTag{
+						Tag: "body",
+					},
+				}, next)
+				assert.False(t, isFinished)
+				assert.Equal(t, []*dom.Node{
+					node1,
+				}, parser.stackOfOpenElements)
+			})
+
+			t.Run("if scrypt end tag, pop until to script", func(t *testing.T) {
+				// Arrange
+				parser := NewHtmlParser(NewHtmlTokenizer(
+					"</script></body>",
+				)).(*HtmlParser)
+				parser.mode = Text
+				parser.originalInsertionMode = InBody
+				parser.stackOfOpenElements = []*dom.Node{
+					node1,
+					node2,
+					node3,
+				}
+
+				// Act
+				next, isFinished := parser.parseText(parser.t.Next())
+
+				// Assert
+				assert.Equal(t, &HtmlToken{
+					EndTag: &EndTag{
+						Tag: "body",
+					},
+				}, next)
+				assert.False(t, isFinished)
+				assert.Equal(t, []*dom.Node{
+					node1,
+					node2,
+				}, parser.stackOfOpenElements)
+			})
+		})
+
+		t.Run("if rune token, insert rune & return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"a</script>",
+			)).(*HtmlParser)
+			parser.mode = Text
+			node := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("script", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			parser.stackOfOpenElements = []*dom.Node{
+				node,
+			}
+
+			// Act
+			next, isFinished := parser.parseText(parser.t.Next())
+
+			// Arrange
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "script",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, "a", parser.currentNode().Kind.Text)
+		})
+
+		t.Run("if start tag, set original InsertionMode & return nil", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<script></script>",
+			)).(*HtmlParser)
+			parser.mode = Text
+			parser.originalInsertionMode = InBody
+
+			// Act
+			next, isFinished := parser.parseText(parser.t.Next())
+
+			// Assert
+			assert.Nil(t, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, InBody, parser.originalInsertionMode)
+		})
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		t.Run("the mode is not Text", func(t *testing.T) {
+			var err error
+			defer func() {
+				if r := recover(); r != nil {
+					err = errors.New("panic")
+				}
+			}()
+
+			// Arrange
+			parser := NewHtmlParser(nil).(*HtmlParser)
+			parser.mode = Initial
+
+			// Act
+			parser.parseText(nil)
 
 			// Assert
 			assert.Error(t, err)

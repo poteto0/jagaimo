@@ -131,7 +131,25 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			}
 
 		case InBody:
-			return nil
+			next, isFinished := parser.parseInBody(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
+		case Text:
+			next, isFinished := parser.parseText(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 		case TextAfterBody:
 			return nil
 		case AfterBody:
@@ -344,13 +362,46 @@ func (parser *HtmlParser) parseInBody(token *HtmlToken) (next *HtmlToken, IsFini
 		}
 	}
 
-	// TODO: star tag
+	// TODO: start tag
 
 	if token.IsEOF() {
 		return nil, true
 	}
 
 	return parser.t.Next(), false
+}
+
+func (parser *HtmlParser) parseText(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != Text {
+		panic("unexpected insertion mode")
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	if token.IsEndTag() {
+		tag := token.EndTag.Tag
+		if tag == "style" {
+			parser.popUntil(types.Style)
+			parser.mode = parser.originalInsertionMode
+			return parser.t.Next(), false
+		}
+
+		if tag == "script" {
+			parser.popUntil(types.Script)
+			parser.mode = parser.originalInsertionMode
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsRune() {
+		parser.insertRune(token.Rune)
+		return parser.t.Next(), false
+	}
+
+	parser.mode = parser.originalInsertionMode
+	return nil, false
 }
 
 // insert element node into node's last child
