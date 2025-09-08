@@ -21,6 +21,7 @@ const (
 	InBody
 	TextAfterBody
 	AfterBody
+	AfterAfterBody
 )
 
 type IHtmlParser interface {
@@ -153,6 +154,16 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 		case TextAfterBody:
 			return nil
 		case AfterBody:
+			next, isFinished := parser.parseAfterBody(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
+		case AfterAfterBody:
 			return nil
 		default:
 			panic("unexpected mode")
@@ -401,6 +412,32 @@ func (parser *HtmlParser) parseText(token *HtmlToken) (next *HtmlToken, IsFinish
 	}
 
 	parser.mode = parser.originalInsertionMode
+	return nil, false
+}
+
+// </html>
+func (parser *HtmlParser) parseAfterBody(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != AfterBody {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		return parser.t.Next(), false
+	}
+
+	if token.IsEndTag() {
+		tag := token.EndTag.Tag
+		if tag == "html" {
+			parser.mode = AfterAfterBody
+			return parser.t.Next(), false
+		}
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	parser.mode = InBody
 	return nil, false
 }
 
