@@ -1038,6 +1038,77 @@ func TestHtmlParser_parseAfterBody(t *testing.T) {
 	})
 }
 
+func TestHtmlParser_parseAfterAfterBody(t *testing.T) {
+	t.Run("normal case", func(t *testing.T) {
+		t.Run("if rune token, return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"ab",
+			)).(*HtmlParser)
+			parser.mode = AfterAfterBody
+
+			// Act
+			next, isFinished := parser.parseAfterAfterBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, newRuneToken('b'), next)
+			assert.False(t, isFinished)
+		})
+
+		t.Run("if EOF, return nil & finish parsing", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"",
+			)).(*HtmlParser)
+			parser.mode = AfterAfterBody
+
+			// Act
+			next, isFinished := parser.parseAfterAfterBody(newEOFToken())
+
+			// Assert
+			assert.Nil(t, next)
+			assert.True(t, isFinished)
+		})
+
+		t.Run("if other token, set InBody", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"</html>",
+			)).(*HtmlParser)
+			parser.mode = AfterAfterBody
+
+			// Act
+			next, isFinished := parser.parseAfterAfterBody(parser.t.Next())
+
+			// Assert
+			assert.Nil(t, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, InBody, parser.mode)
+		})
+	})
+
+	t.Run("panic case", func(t *testing.T) {
+		t.Run("the mode is not AfterAfterBody", func(t *testing.T) {
+			var err error
+			defer func() {
+				if r := recover(); r != nil {
+					err = errors.New("panic")
+				}
+			}()
+
+			// Arrange
+			parser := NewHtmlParser(nil).(*HtmlParser)
+			parser.mode = Initial
+
+			// Act
+			parser.parseAfterAfterBody(nil)
+
+			// Assert
+			assert.Error(t, err)
+		})
+	})
+}
+
 func TestHtmlParser_insertElement(t *testing.T) {
 	t.Run("set currentNode's last child & create node & append stackOfOpenElements", func(t *testing.T) {
 		t.Run("if currentNode's first child is nil, set currentNode's FirstChild node", func(t *testing.T) {

@@ -151,8 +151,6 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 				token = next
 			}
 
-		case TextAfterBody:
-			return nil
 		case AfterBody:
 			next, isFinished := parser.parseAfterBody(token)
 			if isFinished {
@@ -164,7 +162,15 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			}
 
 		case AfterAfterBody:
-			return nil
+			next, isFinished := parser.parseAfterAfterBody(token)
+			if isFinished {
+				return parser.window.(*dom.Window)
+			}
+
+			if next != nil {
+				token = next
+			}
+
 		default:
 			panic("unexpected mode")
 		}
@@ -437,6 +443,24 @@ func (parser *HtmlParser) parseAfterBody(token *HtmlToken) (next *HtmlToken, IsF
 		return nil, true
 	}
 
+	parser.mode = InBody
+	return nil, false
+}
+
+func (parser *HtmlParser) parseAfterAfterBody(token *HtmlToken) (next *HtmlToken, IsFinished bool) {
+	if parser.mode != AfterAfterBody {
+		panic("unexpected insertion mode")
+	}
+
+	if r := token.Rune; r != rune(0) {
+		return parser.t.Next(), false
+	}
+
+	if token.IsEOF() {
+		return nil, true
+	}
+
+	// Parse as much as possible even if there are syntax errors
 	parser.mode = InBody
 	return nil, false
 }
