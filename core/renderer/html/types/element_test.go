@@ -33,6 +33,22 @@ func TestConvertToElementKind(t *testing.T) {
 				elementName: "body",
 				expected:    Body,
 			},
+			{
+				elementName: "p",
+				expected:    P,
+			},
+			{
+				elementName: "h1",
+				expected:    H1,
+			},
+			{
+				elementName: "h2",
+				expected:    H2,
+			},
+			{
+				elementName: "a",
+				expected:    A,
+			},
 		}
 
 		for _, it := range tests {

@@ -347,9 +347,30 @@ func (parser *HtmlParser) parseInBody(token *HtmlToken) (next *HtmlToken, IsFini
 		panic("unexpected insertion mode")
 	}
 
+	if token.IsStartTag() {
+		tag, _, attributes := token.StartTag.Take()
+		if tag == "p" {
+			parser.insertElement(tag, attributes)
+			return parser.t.Next(), false
+		}
+
+		if tag == "h1" || tag == "h2" {
+			parser.insertElement(tag, attributes)
+			return parser.t.Next(), false
+		}
+
+		if tag == "a" {
+			parser.insertElement(tag, attributes)
+			return parser.t.Next(), false
+		}
+
+		// TODO: other start tag
+		return parser.t.Next(), false
+	}
+
 	if token.IsEndTag() {
-		switch token.EndTag.Tag {
-		case "body":
+		tag := token.EndTag.Tag
+		if tag == "body" {
 			parser.mode = AfterBody
 			token := parser.t.Next()
 			// if failed parse, skip token
@@ -358,9 +379,10 @@ func (parser *HtmlParser) parseInBody(token *HtmlToken) (next *HtmlToken, IsFini
 			}
 			parser.popUntil(types.Body)
 			return token, false
+		}
 
 		// if skipped body
-		case "html":
+		if tag == "html" {
 			// auto inserted body
 			if parser.tryPopCurrentNode(types.Body) {
 				parser.mode = AfterBody
@@ -372,19 +394,34 @@ func (parser *HtmlParser) parseInBody(token *HtmlToken) (next *HtmlToken, IsFini
 				return nil, false
 			}
 			return parser.t.Next(), false
+		}
 
-		// TODO: other end tags
-		default:
+		if tag == "p" {
+			parser.popUntil(types.P)
 			return parser.t.Next(), false
 		}
-	}
 
-	// TODO: start tag
+		if tag == "h1" || tag == "h2" {
+			kind, _ := types.ConvertToElementKind(tag)
+			parser.popUntil(kind)
+			return parser.t.Next(), false
+		}
+
+		if tag == "a" {
+			parser.popUntil(types.A)
+			return parser.t.Next(), false
+		}
+
+		// TODO: other end tags
+		return parser.t.Next(), false
+	}
 
 	if token.IsEOF() {
 		return nil, true
 	}
 
+	// This is Rune Token
+	parser.insertRune(token.Rune)
 	return parser.t.Next(), false
 }
 

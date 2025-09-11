@@ -730,7 +730,7 @@ func TestHtmlParser_parseInBody(t *testing.T) {
 			assert.False(t, isFinished)
 		})
 
-		t.Run("if rune token, return next", func(t *testing.T) {
+		t.Run("if rune token, return next & insertRune", func(t *testing.T) {
 			// Arrange
 			parser := NewHtmlParser(NewHtmlTokenizer(
 				"ab",
@@ -738,10 +738,254 @@ func TestHtmlParser_parseInBody(t *testing.T) {
 			parser.mode = InBody
 
 			// Act
-			res, isFinished := parser.parseInBody(parser.t.Next())
+			next, isFinished := parser.parseInBody(parser.t.Next())
 
 			// Assert
-			assert.Equal(t, newRuneToken('b'), res)
+			assert.Equal(t, newRuneToken('b'), next)
+			assert.False(t, isFinished)
+			assert.Equal(t, parser.currentNode().Kind.Text, "a")
+		})
+
+		t.Run("if start p tag, insert p & return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<p></p>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "p",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(
+				t,
+				parser.currentNode().Kind.Element.Kind(),
+				types.P,
+			)
+		})
+
+		t.Run("if p end tag, return next & popUntil p", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"</p></div>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+			node1 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("body", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node2 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("p", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			parser.stackOfOpenElements = []*dom.Node{
+				node1,
+				node2,
+			}
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "div",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, parser.stackOfOpenElements, []*dom.Node{
+				node1,
+			})
+		})
+
+		t.Run("if start h1 tag, insert h1 & return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<h1></h1>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "h1",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(
+				t,
+				parser.currentNode().Kind.Element.Kind(),
+				types.H1,
+			)
+		})
+
+		t.Run("if h1 end tag, return next & popUntil h1", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"</h1></div>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+			node1 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("body", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node2 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("h1", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			parser.stackOfOpenElements = []*dom.Node{
+				node1,
+				node2,
+			}
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "div",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, parser.stackOfOpenElements, []*dom.Node{
+				node1,
+			})
+		})
+
+		t.Run("if start h2 tag, insert h2 & return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<h2></h2>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "h2",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(
+				t,
+				parser.currentNode().Kind.Element.Kind(),
+				types.H2,
+			)
+		})
+
+		t.Run("if h2 end tag, return next & popUntil h2", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"</h2></div>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+			node1 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("body", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node2 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("h2", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			parser.stackOfOpenElements = []*dom.Node{
+				node1,
+				node2,
+			}
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "div",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, parser.stackOfOpenElements, []*dom.Node{
+				node1,
+			})
+		})
+
+		t.Run("if start a tag, insert a & return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<a></a>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "a",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(
+				t,
+				parser.currentNode().Kind.Element.Kind(),
+				types.A,
+			)
+		})
+
+		t.Run("if a end tag, return next & popUntil a", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"</a></div>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+			node1 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("body", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			node2 := dom.NewNode(dom.NodeKind{
+				Element: types.NewElement("a", []types.Attribute{}).(*types.Element),
+			}).(*dom.Node)
+			parser.stackOfOpenElements = []*dom.Node{
+				node1,
+				node2,
+			}
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "div",
+				},
+			}, next)
+			assert.False(t, isFinished)
+			assert.Equal(t, parser.stackOfOpenElements, []*dom.Node{
+				node1,
+			})
+		})
+
+		t.Run("if other start tag, just return next", func(t *testing.T) {
+			// Arrange
+			parser := NewHtmlParser(NewHtmlTokenizer(
+				"<div></div>",
+			)).(*HtmlParser)
+			parser.mode = InBody
+
+			// Act
+			next, isFinished := parser.parseInBody(parser.t.Next())
+
+			// Assert
+			assert.Equal(t, &HtmlToken{
+				EndTag: &EndTag{
+					Tag: "div",
+				},
+			}, next)
 			assert.False(t, isFinished)
 		})
 	})

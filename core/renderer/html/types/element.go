@@ -21,6 +21,15 @@ const (
 
 	// refs: https://html.spec.whatwg.org/multipage/sections.html#the-body-element
 	Body = ElementKind("body")
+
+	P = ElementKind("p")
+
+	// refs: https://html.spec.whatwg.org/multipage/sections.html#the-h1,-h2,-h3,-h4,-h5,-and-h6-elements
+	H1 = ElementKind("h1")
+	H2 = ElementKind("h2")
+
+	// refs: https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-a-element
+	A = ElementKind("a")
 )
 
 func ConvertToElementKind(elementName string) (ElementKind, error) {
@@ -35,6 +44,14 @@ func ConvertToElementKind(elementName string) (ElementKind, error) {
 		return Script, nil
 	case "body":
 		return Body, nil
+	case "p":
+		return P, nil
+	case "h1":
+		return H1, nil
+	case "h2":
+		return H2, nil
+	case "a":
+		return A, nil
 	default:
 		return NilElement, errors.New("unexpected element name")
 	}
