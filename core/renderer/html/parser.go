@@ -175,7 +175,7 @@ func (parser *HtmlParser) ConstructTree() *dom.Window {
 			panic("unexpected mode")
 		}
 	}
-	return nil
+	return parser.window.(*dom.Window)
 }
 
 // not support DOCTYPE
@@ -212,6 +212,10 @@ func (parser *HtmlParser) parseBeforeHtml(token *HtmlToken) (next *HtmlToken, Is
 			parser.mode = BeforeHead
 			return parser.t.Next(), false
 		}
+	}
+
+	if token.IsEndTag() {
+		return parser.t.Next(), false
 	}
 
 	if token.IsEOF() {

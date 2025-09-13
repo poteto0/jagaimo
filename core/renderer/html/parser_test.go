@@ -14,6 +14,21 @@ func TestNewHtmlParser(t *testing.T) {
 	assert.IsType(t, &HtmlParser{}, NewHtmlParser(nil))
 }
 
+func TestHtmlParser_ConstructTree(t *testing.T) {
+	t.Run("single node test", func(t *testing.T) {
+		// Arrange
+		html := "<html><head></head><body>text</body></html>"
+		parser := NewHtmlParser(NewHtmlTokenizer(html)).(*HtmlParser)
+
+		// Act
+		window := parser.ConstructTree()
+
+		// Assert
+		document := window.Document()
+		assert.True(t, document.Kind.IsDocument())
+	})
+}
+
 func TestHtmlParser_parseInitial(t *testing.T) {
 	t.Run("normal case", func(t *testing.T) {
 		t.Run("if rune token, return next token", func(t *testing.T) {

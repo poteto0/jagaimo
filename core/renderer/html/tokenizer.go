@@ -40,7 +40,7 @@ func (tokenizer *HtmlTokenizer) Next() *HtmlToken {
 	// ! not EOF
 	// ! starts w/ last token
 	if tokenizer.Pos >= uint(len(tokenizer.Input)) {
-		return nil
+		return newEOFToken()
 	}
 
 	for {

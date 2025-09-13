@@ -26,12 +26,12 @@ func TestNewHtmlTokenizer(t *testing.T) {
 }
 
 func TestHtmlTokenizer_Iter(t *testing.T) {
-	t.Run("empty string return nil", func(t *testing.T) {
+	t.Run("empty string return EOF token", func(t *testing.T) {
 		// Arrange
 		tokenizer := NewHtmlTokenizer("").(*HtmlTokenizer)
 
 		// Act & Assert
-		assert.Nil(t, tokenizer.Next())
+		assert.Equal(t, tokenizer.Next(), newEOFToken())
 	})
 
 	t.Run("iter case", func(t *testing.T) {
