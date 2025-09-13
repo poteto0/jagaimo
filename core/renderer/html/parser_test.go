@@ -14,6 +14,7 @@ func TestNewHtmlParser(t *testing.T) {
 	assert.IsType(t, &HtmlParser{}, NewHtmlParser(nil))
 }
 
+// TODO: Understand diff bet Child & Sibling
 func TestHtmlParser_ConstructTree(t *testing.T) {
 	t.Run("single node test", func(t *testing.T) {
 		// Arrange
@@ -26,6 +27,15 @@ func TestHtmlParser_ConstructTree(t *testing.T) {
 		// Assert
 		document := window.Document()
 		assert.True(t, document.Kind.IsDocument())
+
+		htmlElement := document.FirstChild
+		assert.Equal(t, htmlElement.Kind.Element.Kind(), types.Html)
+
+		bodyElement := htmlElement.FirstChild.NextSibling
+		assert.Equal(t, bodyElement.Kind.Element.Kind(), types.Body)
+
+		textNode := bodyElement.FirstChild
+		assert.Equal(t, textNode.Kind.Text, "text")
 	})
 }
 
