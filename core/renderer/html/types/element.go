@@ -74,10 +74,14 @@ func NewElement(elementName string, attributes []Attribute) IElement {
 
 	return &Element{
 		kind:       ele,
-		attributes: append(attributes, Attribute{}),
+		attributes: attributes,
 	}
 }
 
 func (element *Element) Kind() ElementKind {
 	return element.kind
+}
+
+func (element *Element) Attributes() []Attribute {
+	return element.attributes
 }

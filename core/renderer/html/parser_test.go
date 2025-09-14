@@ -14,7 +14,6 @@ func TestNewHtmlParser(t *testing.T) {
 	assert.IsType(t, &HtmlParser{}, NewHtmlParser(nil))
 }
 
-// TODO: Understand diff bet Child & Sibling
 func TestHtmlParser_ConstructTree(t *testing.T) {
 	t.Run("single node test", func(t *testing.T) {
 		// Arrange
@@ -36,6 +35,44 @@ func TestHtmlParser_ConstructTree(t *testing.T) {
 
 		textNode := bodyElement.FirstChild
 		assert.Equal(t, textNode.Kind.Text, "text")
+	})
+
+	t.Run("multi node test", func(t *testing.T) {
+		// Arrange
+		html := "<html><head></head><body><p><a foo=bar>text</a></p></body></html>"
+		parser := NewHtmlParser(NewHtmlTokenizer(html)).(*HtmlParser)
+
+		// Act
+		window := parser.ConstructTree()
+
+		// Assert
+		document := window.Document()
+		assert.True(t, document.Kind.IsDocument())
+
+		htmlElement := document.FirstChild
+		assert.Equal(t, htmlElement.Kind.Element.Kind(), types.Html)
+
+		headElement := htmlElement.FirstChild
+		assert.Equal(t, headElement.Kind.Element.Kind(), types.Head)
+
+		bodyElement := headElement.NextSibling
+		assert.Equal(t, bodyElement.Kind.Element.Kind(), types.Body)
+
+		pElement := bodyElement.FirstChild
+		assert.Equal(t, pElement.Kind.Element.Kind(), types.P)
+
+		aElement := pElement.FirstChild
+		attr := types.NewAttribute("", "").(*types.Attribute)
+		attr.AddRune('f', true)
+		attr.AddRune('o', true)
+		attr.AddRune('o', true)
+		attr.AddRune('b', false)
+		attr.AddRune('a', false)
+		attr.AddRune('r', false)
+		assert.Equal(t, aElement.Kind.Element, types.NewElement("a", []types.Attribute{*attr}).(*types.Element))
+
+		textElement := aElement.FirstChild
+		assert.Equal(t, textElement.Kind.Text, "text")
 	})
 }
 

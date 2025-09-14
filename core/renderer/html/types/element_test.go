@@ -83,3 +83,16 @@ func TestElement_Kind(t *testing.T) {
 	// Act & Assert
 	assert.Equal(t, Html, element.Kind())
 }
+
+func TestElement_Attributes(t *testing.T) {
+	// Arrange
+	attributes := []Attribute{
+		*NewAttribute("foo", "bar").(*Attribute),
+	}
+	element := NewElement("html", attributes).(*Element)
+
+	// Act & Assert
+	assert.Equal(
+		t, element.Attributes(), attributes,
+	)
+}
