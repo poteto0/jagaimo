@@ -16,7 +16,7 @@ type Browser struct {
 }
 
 func NewBrowser() IBrowser {
-	page := NewPage()
+	page := NewPage().(*Page)
 	browser := &Browser{
 		currentPageIndex: 0,
 		pages:            []*Page{},
